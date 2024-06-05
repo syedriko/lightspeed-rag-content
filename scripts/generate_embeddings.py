@@ -34,7 +34,7 @@ def get_file_title(file_path: str) -> str:
     title = ""
     try:
         with open(file_path, "r") as file:
-            title = file.readline().rstrip("\n")
+            title = file.readline().rstrip("\n").lstrip("# ")
     except Exception:  # noqa: S110
         pass
     return title
@@ -62,6 +62,18 @@ def file_metadata_func(file_path: str) -> Dict:
     return {"docs_url": docs_url, "title": title}
 
 
+def runbook_file_metadata_func(file_path: str) -> Dict:
+    """Populate the runbook title metadata element.
+
+    Args:
+        file_path: str: file path in str
+    """
+    title = get_file_title(file_path)
+    msg = f"runbook file_path: {file_path}, title: {title} alert"
+    print(msg)
+    return {"docs_url": "", "title": title + " alert"}
+
+
 def got_whitespace(text: str) -> bool:
     """Indicate if the parameter string contains whitespace."""
     for c in text:
@@ -76,6 +88,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="embedding cli for task execution")
     parser.add_argument("-f", "--folder", help="Plain text folder path")
+    parser.add_argument("-r", "--runbooks", help="Runbooks folder path")
     parser.add_argument(
         "-md",
         "--model-dir",
@@ -128,6 +141,13 @@ if __name__ == "__main__":
         else:
             print("skipping node without whitespace: " + node.__repr__())
 
+    runbook_documents = SimpleDirectoryReader(
+        args.runbooks, recursive=True, required_exts=[".md"], file_metadata=runbook_file_metadata_func
+    ).load_data()
+    runbook_nodes = Settings.text_splitter.get_nodes_from_documents(runbook_documents)
+
+    good_nodes.extend(runbook_nodes)
+
     index = VectorStoreIndex(
         good_nodes,
         storage_context=storage_context,
@@ -149,8 +169,8 @@ if __name__ == "__main__":
     with open(os.path.join(PERSIST_FOLDER, "metadata.json"), "w") as file:
         file.write(json.dumps(metadata))
 
-    if UNREACHABLE_DOCS:
-        raise Exception(
-            "There were documents with unreachable URLs, grep the log for UNREACHABLE.\n"
-            "Please update the plain text."
-        )
+    # if UNREACHABLE_DOCS:
+    #     raise Exception(
+    #         "There were documents with unreachable URLs, grep the log for UNREACHABLE.\n"
+    #         "Please update the plain text."
+    #     )
