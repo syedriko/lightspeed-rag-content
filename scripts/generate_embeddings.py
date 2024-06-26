@@ -10,15 +10,17 @@ import faiss
 import requests
 from llama_index.core import Settings, SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.llms.utils import resolve_llm
-from llama_index.readers.file.flat.base import FlatReader
 
 # from llama_index.core.node_parser import MarkdownNodeParser
 from llama_index.core.schema import TextNode
 from llama_index.core.storage.storage_context import StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.readers.file.flat.base import FlatReader
 from llama_index.vector_stores.faiss import FaissVectorStore
 
-OCP_DOCS_ROOT_URL = "https://docs.openshift.com/container-platform/"
+OCP_DOCS_ROOT_URL = (
+    "https://docs.redhat.com/en/documentation/openshift_container_platform/"
+)
 OCP_DOCS_VERSION = "4.15"
 UNREACHABLE_DOCS: bool = False
 RUNBOOKS_ROOT_URL = "https://github.com/openshift/runbooks/blob/master/alerts"
@@ -71,8 +73,8 @@ def ocp_file_metadata_func(file_path: str) -> Dict:
     docs_url = lambda file_path: (  # noqa: E731
         OCP_DOCS_ROOT_URL
         + OCP_DOCS_VERSION
-        + file_path.removeprefix(EMBEDDINGS_ROOT_DIR).removesuffix("txt")
-        + "html"
+        + "/html"
+        + file_path.removeprefix(EMBEDDINGS_ROOT_DIR).removesuffix(".txt")
     )
     return file_metadata_func(file_path, docs_url)
 
