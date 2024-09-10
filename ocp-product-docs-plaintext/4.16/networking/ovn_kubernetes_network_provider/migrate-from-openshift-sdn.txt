@@ -13,6 +13,12 @@ To learn more about OVN-Kubernetes, read About the OVN-Kubernetes network plugin
 
 The offline migration method is a manual process that includes some downtime, during which your cluster is unreachable. This method is primarily used for self-managed Red Hat OpenShift Container Platform deployments.
 
+
+[IMPORTANT]
+----
+Before you migrate your Red Hat OpenShift Container Platform cluster to use the OVN-Kubernetes network plugin, update your cluster to the latest z-stream release so that all the latest bug fixes apply to your cluster.
+----
+
 Although a rollback procedure is provided, the offline migration is intended to be a one-way process.
 
 
@@ -106,6 +112,9 @@ For more information on using multicast in OVN-Kubernetes, see "Enabling multica
 ## Network policies
 
 OVN-Kubernetes fully supports the Kubernetes NetworkPolicy API in the networking.k8s.io/v1 API group. No changes are necessary in your network policies when migrating from OpenShift SDN.
+
+* Understanding update channels and releases
+* Asynchronous errata updates
 
 ## How the offline migration process works
 
@@ -510,6 +519,13 @@ $ oc delete namespace openshift-sdn
 # Limited live migration to the OVN-Kubernetes network plugin overview
 
 The limited live migration method is the process in which the OpenShift SDN network plugin and its network configurations, connections, and associated resources, are migrated to the OVN-Kubernetes network plugin without service interruption. It is available for Red Hat OpenShift Container Platform.
+
+
+[IMPORTANT]
+----
+Before you migrate your Red Hat OpenShift Container Platform cluster to use the OVN-Kubernetes network plugin, update your cluster to the latest z-stream release so that all the latest bug fixes apply to your cluster.
+----
+
 It is not available for hosted control plane deployment types. This migration method is valuable for deployment types that require constant service availability and offers the following benefits:
 
 * Continuous service availability
@@ -555,6 +571,9 @@ During the limited live migration, both OVN-Kubernetes and OpenShift SDN run in 
 * In most cases, the limited live migration is independent of the secondary interfaces of pods created by the Multus CNI plugin. However, if these secondary interfaces were set up on the default network interface controller (NIC) of the host, for example, using MACVLAN, IPVLAN, SR-IOV, or bridge interfaces with the default NIC as the control node, OVN-Kubernetes might encounter malfunctions. Users should remove such configurations before proceeding with the limited live migration.
 * When there are multiple NICs inside of the host, and the default route is not on the interface that has the Kubernetes NodeIP, you must use the offline migration instead.
 * All DaemonSet objects in the openshift-sdn namespace, which are not managed by the Cluster Network Operator (CNO), must be removed before initiating the limited live migration. These unmanaged daemon sets can cause the migration status to remain incomplete if not properly handled.
+
+* Understanding update channels and releases
+* Asynchronous errata updates
 
 ## How the limited live migration process works
 

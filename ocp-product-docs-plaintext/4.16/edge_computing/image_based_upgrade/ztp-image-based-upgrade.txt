@@ -9,6 +9,17 @@ You update this CR to specify the image repository of the seed image and to move
 
 When you deploy the Lifecycle Agent on a cluster, an ImageBasedUpgrade CR is automatically created. You update this CR to specify the image repository of the seed image and to move through the different stages.
 
+
+```yaml
+apiVersion: lca.openshift.io/v1
+kind: ImageBasedUpgrade
+metadata:
+  name: upgrade
+spec:
+  stage: Idle
+```
+
+
 * Create policies and ConfigMap objects for resources used in the image-based upgrade. For more information, see "Creating ConfigMap objects for the image-based upgrade with GitOps ZTP.
 
 1. Add policies for the Prep, Upgrade, and Idle stages to your existing group PolicyGenTemplate called ibu-upgrade-ranGen.yaml:

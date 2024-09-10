@@ -6,13 +6,47 @@
 
 Red Hat is committed to replacing problematic language in our code, documentation, and web properties. We are beginning with these four terms: master, slave, blacklist, and whitelist. Because of the enormity of this endeavor, these changes will be implemented gradually over several upcoming releases. For more details, see our CTO Chris Wright's message.
 
+# Red Hat OpenShift Service Mesh version 2.6.1
+
+This release of Red Hat OpenShift Service Mesh includes 2.6.1, 2.5.4, and 2.4.10; addresses Common Vulnerabilities and Exposures (CVEs); contains a bug fix; and is supported on Red Hat OpenShift Container Platform 4.14 and later.
+
+The most current version of the Red Hat OpenShift Service Mesh Operator can be used with all supported versions of Service Mesh. The version of Service Mesh is specified by using the ServiceMeshControlPlane resource.
+
+The most current version of the Kiali Operator provided by Red Hat can be used with all supported versions of Red Hat OpenShift Service Mesh. The version of Service Mesh is specified by using the ServiceMeshControlPlane resource.  The version of Service Mesh automatically ensures a compatible version of Kiali.
+
+## Component updates
+
+
+
+## Fixed issues
+
+* OSSM-6766 Previously, the OpenShift Service Mesh Console (OSSMC) plugin failed if the user wanted to update a namespace (for example, enabling or disabling injection), or create any Istio object (for example, creating traffic policies). Now, the OpenShift Service Mesh Console (OSSMC) plugin does not fail if the user  updates a namespace or creates any Istio object.
+
+# Red Hat OpenShift Service Mesh version 2.5.4
+
+This release of Red Hat OpenShift Service Mesh addresses Common Vulnerabilities and Exposures (CVEs) and is supported on Red Hat OpenShift Container Platform 4.14 and later.
+
+## Component updates
+
+
+
+# Red Hat OpenShift Service Mesh version 2.4.10
+
+This release of Red Hat OpenShift Service Mesh addresses Common Vulnerabilities and Exposures (CVEs) and is supported on Red Hat OpenShift Container Platform 4.14 and later.
+
+## Component updates
+
+
+
+
+
 # New features and enhancements
 
 This release adds improvements related to the following components and concepts.
 
 ## New features Red Hat OpenShift Service Mesh version 2.6
 
-This release of Red Hat OpenShift Service Mesh adds new features, addresses Common Vulnerabilities and Exposures (CVEs), and is supported on Red Hat OpenShift Container Platform 4.12 and later.
+This release of Red Hat OpenShift Service Mesh adds new features, addresses Common Vulnerabilities and Exposures (CVEs), and is supported on Red Hat OpenShift Container Platform 4.14 and later.
 
 This release ends maintenance support for Red Hat OpenShift Service Mesh version 2.3. If you are using Service Mesh version 2.3, you should update to a supported version.
 
@@ -1542,9 +1576,6 @@ New issues for Kiali should be created in the OpenShift Service Mesh project wit
 
 These are the known issues in Kiali:
 
-* OSSM-6766 The OpenShift Service Mesh Console (OSSMC) plugin fails if the user wants to update a namespace (for example, enable/disable injection) or create any Istio object (for example, create traffic policies).
-
-Workaround: Use the standalone Kiali application to update a namespace or create any Istio object.
 * KIALI-2206 When you are accessing the Kiali console for the first time, and there is no cached browser data for Kiali, the “View in Grafana” link on the Metrics tab of the Kiali Service Details page redirects to the wrong location. The only way you would encounter this issue is if you are accessing Kiali for the first time.
 * KIALI-507 Kiali does not support Internet Explorer 11. This is because the underlying frameworks do not support Internet Explorer. To access the Kiali console, use one of the two most recent versions of the Chrome, Edge, Firefox or Safari browser.
 
