@@ -1,0 +1,30 @@
+# List triggers from the command line
+
+Using the Knative (kn) CLI to list triggers provides a streamlined and intuitive user interface.
+
+# Listing triggers by using the Knative CLI
+
+You can use the kn trigger list command to list existing triggers in your cluster.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have installed the Knative (kn) CLI.
+
+1. Print a list of available triggers:
+
+```terminal
+$ kn trigger list
+```
+
+Example output
+
+```terminal
+NAME    BROKER    SINK           AGE   CONDITIONS   READY   REASON
+email   default   ksvc:edisplay   4s    5 OK / 5     True
+ping    default   ksvc:edisplay   32s   5 OK / 5     True
+```
+
+2. Optional: Print a list of triggers in JSON format:
+
+```terminal
+$ kn trigger list -o json
+```

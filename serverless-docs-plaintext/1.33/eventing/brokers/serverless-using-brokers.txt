@@ -1,0 +1,226 @@
+# Creating brokers
+
+
+Knative provides a default, channel-based broker implementation. This channel-based broker can be used for development and testing purposes, but does not provide adequate event delivery guarantees for production environments.
+If a cluster administrator has configured your OpenShift Serverless deployment to use Apache Kafka as the default broker type, creating a broker by using the default settings creates a Knative broker for Apache Kafka.
+If your OpenShift Serverless deployment is not configured to use the Knative broker for Apache Kafka as the default broker type, the channel-based broker is created when you use the default settings in the following procedures.
+
+# Creating a broker by using the Knative CLI
+
+Brokers can be used in combination with triggers to deliver events from an event source to an event sink. Using the Knative (kn) CLI to create brokers provides a more streamlined and intuitive user interface over modifying YAML files directly. You can use the kn broker create command to create a broker.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+* Create a broker:
+
+```terminal
+$ kn broker create <broker_name>
+```
+
+
+1. Use the kn command to list all existing brokers:
+
+```terminal
+$ kn broker list
+```
+
+Example output
+
+```terminal
+NAME      URL                                                                     AGE   CONDITIONS   READY   REASON
+default   http://broker-ingress.knative-eventing.svc.cluster.local/test/default   45s   5 OK / 5     True
+```
+
+2. Optional: If you are using the OpenShift Container Platform web console, you can navigate to the Topology view in the Developer perspective, and observe that the broker exists:
+![View the broker in the web console Topology view]
+
+# Creating a broker by annotating a trigger
+
+Brokers can be used in combination with triggers to deliver events from an event source to an event sink. You can create a broker by adding the eventing.knative.dev/injection: enabled annotation to a Trigger object.
+
+
+[IMPORTANT]
+----
+If you create a broker by using the eventing.knative.dev/injection: enabled annotation, you cannot delete this broker without cluster administrator permissions.
+If you delete the broker without having a cluster administrator remove this annotation first, the broker is created again after deletion.
+----
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* Install the OpenShift CLI (oc).
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+1. Create a Trigger object as a YAML file that has the eventing.knative.dev/injection: enabled annotation:
+
+```yaml
+apiVersion: eventing.knative.dev/v1
+kind: Trigger
+metadata:
+  annotations:
+    eventing.knative.dev/injection: enabled
+  name: <trigger_name>
+spec:
+  broker: default
+  subscriber: 1
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: <service_name>
+```
+
+Specify details about the event sink, or subscriber, that the trigger sends events to.
+2. Apply the Trigger YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+
+You can verify that the broker has been created successfully by using the oc CLI, or by observing it in the Topology view in the web console.
+
+1. Enter the following oc command to get the broker:
+
+```terminal
+$ oc -n <namespace> get broker default
+```
+
+Example output
+
+```terminal
+NAME      READY     REASON    URL                                                                     AGE
+default   True                http://broker-ingress.knative-eventing.svc.cluster.local/test/default   3m56s
+```
+
+2. Optional: If you are using the OpenShift Container Platform web console, you can navigate to the Topology view in the Developer perspective, and observe that the broker exists:
+![View the broker in the web console Topology view]
+
+# Creating a broker by labeling a namespace
+
+Brokers can be used in combination with triggers to deliver events from an event source to an event sink. You can create the default broker automatically by labelling a namespace that you own or have write permissions for.
+
+
+[NOTE]
+----
+Brokers created using this method are not removed if you remove the label. You must manually delete them.
+----
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* Install the OpenShift CLI (oc).
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have cluster or dedicated administrator permissions if you are using Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+
+* Label a namespace with eventing.knative.dev/injection=enabled:
+
+```terminal
+$ oc label namespace <namespace> eventing.knative.dev/injection=enabled
+```
+
+
+You can verify that the broker has been created successfully by using the oc CLI, or by observing it in the Topology view in the web console.
+
+1. Use the oc command to get the broker:
+
+```terminal
+$ oc -n <namespace> get broker <broker_name>
+```
+
+Example command
+
+```terminal
+$ oc -n default get broker default
+```
+
+Example output
+
+```terminal
+NAME      READY     REASON    URL                                                                     AGE
+default   True                http://broker-ingress.knative-eventing.svc.cluster.local/test/default   3m56s
+```
+
+2. Optional: If you are using the OpenShift Container Platform web console, you can navigate to the Topology view in the Developer perspective, and observe that the broker exists:
+![View the broker in the web console Topology view]
+
+# Deleting a broker that was created by injection
+
+If you create a broker by injection and later want to delete it, you must delete it manually. Brokers created by using a namespace label or trigger annotation are not deleted permanently if you remove the label or annotation.
+
+* Install the OpenShift CLI (oc).
+
+1. Remove the eventing.knative.dev/injection=enabled label from the namespace:
+
+```terminal
+$ oc label namespace <namespace> eventing.knative.dev/injection-
+```
+
+
+Removing the annotation prevents Knative from recreating the broker after you delete it.
+2. Delete the broker from the selected namespace:
+
+```terminal
+$ oc -n <namespace> delete broker <broker_name>
+```
+
+
+* Use the oc command to get the broker:
+
+```terminal
+$ oc -n <namespace> get broker <broker_name>
+```
+
+Example command
+
+```terminal
+$ oc -n default get broker default
+```
+
+Example output
+
+```terminal
+No resources found.
+Error from server (NotFound): brokers.eventing.knative.dev "default" not found
+```
+
+
+# Creating a broker by using the web console
+
+After Knative Eventing is installed on your cluster, you can create a broker by using the web console. Using the OpenShift Container Platform web console provides a streamlined and intuitive user interface to create a broker.
+
+* You have logged in to the OpenShift Container Platform web console.
+* The OpenShift Serverless Operator, Knative Serving and Knative Eventing are installed on the cluster.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+1. In the Developer perspective, navigate to +Add -> Broker. The Broker page is displayed.
+2. Optional. Update the Name of the broker. If you do not update the name, the generated broker is named default.
+3. Click Create.
+
+You can verify that the broker was created by viewing broker components in the Topology page.
+
+1. In the Developer perspective, navigate to Topology.
+2. View the mt-broker-ingress, mt-broker-filter, and mt-broker-controller components.
+![View the broker components in the Topology view]
+
+# Creating a broker by using the Administrator perspective
+
+Brokers can be used in combination with triggers to deliver events from an event source to an event sink. Events are sent from an event source to a broker as an HTTP POST request. After events have entered the broker, they can be filtered by CloudEvent attributes using triggers, and sent as an HTTP POST request to an event sink.
+
+![Broker event delivery overview]
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have logged in to the web console and are in the Administrator perspective.
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+
+1. In the Administrator perspective of the OpenShift Container Platform web console, navigate to Serverless -> Eventing.
+2. In the Create list, select Broker. You will be directed to the Create Broker page.
+3. Optional: Modify the YAML configuration for the broker.
+4. Click Create.
+
+# Next steps
+
+* Configure event delivery parameters that are applied in cases where an event fails to be delivered to an event sink.
+
+# Additional resources
+
+* Configuring the default broker class
+* Triggers
+* Connect a broker to a sink using the Developer perspective

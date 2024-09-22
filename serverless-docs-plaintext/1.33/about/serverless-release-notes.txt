@@ -1,0 +1,859 @@
+# Release notes
+
+
+
+[NOTE]
+----
+For additional information about the OpenShift Serverless life cycle and supported platforms, refer to the OpenShift Operator Life Cycles.
+----
+Release notes contain information about new and deprecated features, breaking changes, and known issues. The following release notes apply for the most recent OpenShift Serverless releases on OpenShift Container Platform.
+For an overview of OpenShift Serverless functionality, see About OpenShift Serverless.
+
+[NOTE]
+----
+OpenShift Serverless is based on the open source Knative project.
+For details about the latest Knative component releases, see the Knative blog.
+----
+
+# About API versions
+
+API versions are an important measure of the development status of certain features and custom resources in OpenShift Serverless. Creating resources on your cluster that do not use the correct API version can cause issues in your deployment.
+
+The OpenShift Serverless Operator automatically upgrades older resources that use deprecated versions of APIs to use the latest version. For example, if you have created resources on your cluster that use older versions of the ApiServerSource API, such as v1beta1, the OpenShift Serverless Operator automatically updates these resources to use the v1 version of the API when this is available and the v1beta1 version is deprecated.
+
+After they have been deprecated, older versions of APIs might be removed in any upcoming release. Using deprecated versions of APIs does not cause resources to fail. However, if you try to use a version of an API that has been removed, it will cause resources to fail. Ensure that your manifests are updated to use the latest version to avoid issues.
+
+# Generally Available and Technology Preview features
+
+Features that are Generally Available (GA) are fully supported and are suitable for production use. Technology Preview (TP) features are experimental features and are not intended for production use. See the Technology Preview scope of support on the Red Hat Customer Portal for more information about TP features.
+
+The following table provides information about which OpenShift Serverless features are GA and which are TP:
+
+
+
+# Deprecated and removed features
+
+Some features that were Generally Available (GA) or a Technology Preview (TP) in previous releases have been deprecated or removed. Deprecated functionality is still included in OpenShift Serverless and continues to be supported; however, it will be removed in a future release of this product and is not recommended for new deployments.
+
+For the most recent list of major functionality deprecated and removed within OpenShift Serverless, refer to the following table:
+
+
+
+# Red Hat OpenShift Serverless 1.33.2
+
+OpenShift Serverless 1.33.2 is now available. Fixed issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes:
+
+## Fixed issues
+
+* Previously, creating Knative installation resources like KnativeServing or KnativeEventing in a user namespace triggered an infinite reconciliation loop in the OpenShift Serverless Operator. This issue has been resolved by reintroducing an admission webhook that prevents the creation of Knative installation resources in any namespace other than knative-serving or knative-eventing.
+* Previously, post-install batch jobs were removed after a certain period, leaving privileged service accounts unbound. This caused compliance systems to flag the issue. The problem has been resolved by retaining completed jobs, ensuring that service accounts remain bound.
+
+# Red Hat OpenShift Serverless 1.33
+
+OpenShift Serverless 1.33 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes:
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.12.
+* OpenShift Serverless now uses Knative Eventing 1.12.
+* OpenShift Serverless now uses Kourier 1.12.
+* OpenShift Serverless now uses Knative (kn) CLI 1.12.
+* OpenShift Serverless now uses Knative for Apache Kafka 1.12.
+* The kn func CLI plugin now uses func 1.14.
+* OpenShift Serverless Logic is now generally available (GA). This release includes an overview of OpenShift Serverless Logic; instructions on creating, running, and deploying workflows; and guidelines for the installation and uninstallation of OpenShift Serverless Logic Operator. Additionally, it includes steps for configuring OpenAPI services and endpoints, and techniques for troubleshooting the services. For more information, see OpenShift Serverless Logic overview.
+
+You can also refer to the additional documentation. For more details, see the Serverless Logic documentation.
+* OpenShift Serverless on ARM64 is now available as Technology Preview.
+* The NamespacedKafka annotation is now deprecated. Use the standard Kafka broker without data plane isolation instead.
+* When enabling the automatic EventType auto-creation, you can now easily discover events available within the cluster. This functionality is available as a Developer Preview.
+* You can now explore the Knative Eventing monitoring dashboards directly within the Observe tab of the developer view in the OpenShift Developer Console.
+* You can now use the Custom Metrics Autoscaler Operator to autoscale Knative Eventing sources for Apache Kafka sources, defined by a KafkaSource object. This functionality is available as a Technology Preview feature, offering enhanced scalability and efficiency for Kafka-based event sources within Knative Eventing.
+* You can now customize the internal Kafka topic properties when creating a Knative Broker with Kafka implementation. This improves efficiency and simplifies management.
+* The new trigger filters feature is now available as a Technology Preview. These filters are enabled by default and allows users to specify a set of filter expressions, where each expression evaluates to either true or false for each event.
+
+## Known issues
+
+* Due to different mount point permissions, direct upload on a cluster build does not work on IBM zSystems (s390x) and IBM Power (ppc64le).
+* Building and deploying a function using Podman version 4.6 fails with the invalid pull policy "1" error.
+
+To work around this issue, use Podman version 4.5.
+
+# Red Hat OpenShift Serverless 1.32
+
+OpenShift Serverless 1.32 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.11.
+* OpenShift Serverless now uses Knative Eventing 1.11.
+* OpenShift Serverless now uses Kourier 1.11.
+* OpenShift Serverless now uses Knative (kn) CLI 1.11.
+* OpenShift Serverless now uses Knative for Apache Kafka 1.11.
+* The kn func CLI plugin now uses func 1.13.
+* Serverless Logic, which is available as a Technology Preview (TP) feature, has been updated.
+
+See the Serverless Logic documentation for usage instructions.
+* You can configure the OpenShift Serverless Functions readiness and liveness probe settings for the user container and queue-proxy container.
+* OpenShift Serverless Functions now supports OpenShift Pipelines versions from 1.10 till 1.14 (latest). The older versions of OpenShift Pipelines are no longer compatible with OpenShift Serverless Functions.
+* On-cluster function building, including using Pipelines as Code is now supported on IBM zSystems (s390x) and IBM Power (ppc64le) on OpenShift Data Foundation storage only.
+* You can now subscribe a function to a set of events by using the func subscribe command. This links your function to CloudEvent objects defined by your filters and enables automated responses.
+* The Knative Serving TLS encryption feature for internal traffic is now deprecated. It was a Tech Preview feature. The functionality with the internal-encryption configuration flag is no longer available and it will be replaced by new configuration flags in a future release.
+* The secret filtering is enabled by default on the OpenShift Serverless Operator side. An environment variable ENABLE_SECRET_INFORMER_FILTERING_BY_CERT_UID=true, is added by default to the net-istio and net-kourier controller pods.
+* The domain-mapping and domain-mapping-webhook deployments functionality in the knative-serving namespace is now removed. They are now integrated with Serving Webhook and Serving Controller.
+* If you set spec.config.domain field in the KnativeServing custom resource (CR), the default external domain will no longer auto-populates the config-domain config map in the knative-serving namespace. Now, you must configure the config-domain config map manually to ensure accurate domain settings.
+* You can now use the gRPC health probe for net-kourier deployments. The the Kourier Controller now uses a standard Kubernetes gRPC health probe for both readiness and liveness, replacing its previous use of exec and custom commands. The timeoutSeconds value has been adjusted from 100 milliseconds to 1 second to ensure more reliable probe responses.
+* The new trigger filters feature is now available as a Technology Preview. The new trigger filters are now enabled by default. It allows users to specify a set of filter expressions, where each expression evaluates to either true or false for each event.
+* Knative Eventing now offers support for data in transit encryption (Eventing TLS) as a developer preview. You can configure Knative Eventing components to expose HTTPS addresses as well as add user-provided CA trust bundles to clients.
+* OpenShift Serverless now supports custom OpenShift CA bundle injection for system components. For more information, see Configuring a custom PKI.
+* You can now use the Custom Metrics Autoscaler Operator to autoscale Knative Eventing sources for Apache Kafka sources. This functionality is available as a developer preview, offering enhanced scalability and efficiency for Kafka-based event sources within Knative Eventing.
+* You can now explore the Knative Eventing monitoring dashboards directly within the Observe tab of the Developer view in the OpenShift Developer Console.
+* The support for EventTypes v1beta1 in Knative shipped is deprecated in OpenShift Serverless 1.32. In OpenShift Serverless 1.32, the Knative CLI uses the EventType v1beta2 API to facilitate the new reference model. In previous releases, the kn CLI is not backward compatible with the EventType API v1beta1 and is limited to the kn eventtypes sub-commands group. Therefore, it is recommended to use a matching kn version for the best user experience.
+
+## Fixed issues
+
+* The default CPU limit is now increased for 3scale-kourier-gateways from 500m to 1s. When more than 500 Knative Service instances are created, it could lead to readiness and liveness probe failures in the 3scale-kourier-gateways pod due to CPU resource exhaustion. This adjustment aims to reduce such failures and ensures smoother operation even under heavy loads.
+
+## Known issues
+
+* Due to different mount point permissions, direct upload on a cluster build does not work on IBM zSystems (s390x) and IBM Power (ppc64le).
+* Building and deploying a function using Podman version 4.6 fails with the invalid pull policy "1" error.
+
+To work around this issue, use Podman version 4.5.
+
+# Red Hat OpenShift Serverless 1.31
+
+OpenShift Serverless 1.31 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.10.
+* OpenShift Serverless now uses Knative Eventing 1.10.
+* OpenShift Serverless now uses Kourier 1.10.
+* OpenShift Serverless now uses Knative (kn) CLI 1.10.
+* OpenShift Serverless now uses Knative for Apache Kafka 1.10.
+* The kn func CLI plug-in now uses func 1.11.
+* OpenShift Serverless multi-tenancy with Service Mesh is now available as a Technology Preview (TP) feature.
+* Serverless Logic, which is available as a Technology Preview (TP) feature, has been updated.
+
+See the Serverless Logic documentation for usage instructions.
+* OpenShift Serverless can now be installed and used on single-node OpenShift.
+* You can now configure a persistent volume claim (PVC) for an existing PersistentVolume object to use with a Serverless function.
+* When specifying Kourier for Ingress and using DomainMapping, the TLS for OpenShift Route is set to passthrough, and TLS is handled by the Kourier Gateway. Beginning with Serverless 1.31, it is possible to specify the enabled cipher suites on the side of the Kourier Gateway.
+* Integrating Red Hat OpenShift Service Mesh with Serverless when Kourier is enabled is now deprecated. Use net-istio instead of net-kourier for Service Mesh integration.
+
+See the "Integrating Red Hat OpenShift Service Mesh with Serverless" section for details.
+* The PodDistruptionBudget and HorizontalPodAutoscaler objects have been added for the 3scale-kourier-gateway deployment.
+* PodDistruptionBudget is used to define the minimum availability requirements for pods in a deployment.
+* HorizontalPodAutoscaler is used to automatically scale the number of pods in the deployment based on demand or on your custom metrics.
+* Now you can change the pattern for Apache Kafka topic names used by Knative brokers and channels for Apache Kafka.
+* The DomainMapping v1alpha1 custom resource definition (CRD) is now deprecated. Use v1beta1 CRD instead.
+* The NamespacedKafka annotation, which was a Technology Preview (TP) feature, is now deprecated in favor of the standard Kafka broker with no data plane isolation.
+
+## Fixed issues
+
+* Previously, when deploying Knative Eventing with full Red Hat OpenShift Service Mesh integration and with STRICT peer authentication, the PingSource adapter metrics were unavailable.
+
+This has been fixed, and the PingSource adapter metrics are now collected using a different job and service label value. The previous value was pingsource-mt-adapter, the new value is pingsource-mt-adapter-sm-service.
+
+# Red Hat OpenShift Serverless 1.30.2
+
+OpenShift Serverless 1.30.2 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+This release of OpenShift Serverless addresses Common Vulnerabilities and Exposures (CVEs), contains bug fixes, and is supported on OpenShift Container Platform 4.11 and later versions. Notably, this update addresses CVE-2023-44487 - HTTP/2 Rapid Stream Reset by disabling HTTP/2 transport on Serving, Eventing webhooks, and RBAC proxy containers.
+
+# Red Hat OpenShift Serverless 1.30.1
+
+OpenShift Serverless 1.30.1 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+This release of OpenShift Serverless addresses Common Vulnerabilities and Exposures (CVEs), contains bug fixes, and is supported on OpenShift Container Platform 4.11 and later versions.
+
+# Red Hat OpenShift Serverless 1.30
+
+OpenShift Serverless 1.30 is now available. New features, updates, and known issues that relate to OpenShift Serverless on OpenShift Container Platform are included in the following.
+
+
+[IMPORTANT]
+----
+OpenShift Container Platform 4.13 is based on Red Hat Enterprise Linux (RHEL) 9.2. RHEL 9.2 has not been submitted for Federal Information Processing Standards (FIPS) validation. Although Red Hat cannot commit to a specific timeframe, we expect to obtain FIPS validation for RHEL 9.0 and RHEL 9.2 modules, and later even minor releases of RHEL 9.x. Information on updates will be available in the Compliance Activities and Government Standards Knowledgebase article.
+----
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.9.
+* OpenShift Serverless now uses Knative Eventing 1.9.
+* OpenShift Serverless now uses Kourier 1.9.
+* OpenShift Serverless now uses Knative (kn) CLI 1.9.
+* OpenShift Serverless now uses Knative for Apache Kafka 1.9.
+* The kn func CLI plug-in now uses func 1.10.1.
+* OpenShift Serverless now runs on HyperShift-hosted clusters.
+* OpenShift Serverless now runs on single-node OpenShift.
+* Developer Experience around OpenShift Serverless is now available through OpenShift Toolkit, an OpenShift IDE Extension for the Visual Studio Code (VSCode). The extension can be installed from the VSCode Extension Tab and VSCode Marketplace. See the Marketplace page for the Visual Studio Code OpenShift Toolkit extension.
+* OpenShift Serverless Functions nows supports Red Hat OpenShift Pipelines versions 1.10 and 1.11. Older versions of Red Hat OpenShift Pipelines are no longer compatible with OpenShift Serverless Functions.
+* Serverless Logic is now available as a Technology Preview (TP) feature.
+
+See the Serverless Logic documentation for details.
+* Beginning with OpenShift Serverless 1.30.0, the following runtime environments are supported on IBM zSystems using the s2i builder:
+* NodeJS
+* Python
+* TypeScript
+* Quarkus
+* Eventing integration with Red Hat OpenShift Service Mesh is now available as a Technology Preview (TP) feature.
+
+The integration includes the following:
+* PingSource
+* ApiServerSource
+* Knative Source for Apache Kafka
+* Knative Broker for Apache Kafka
+* Knative Sink for Apache Kafka
+* ContainerSource
+* SinkBinding
+* InMemoryChannel
+* KafkaChannel
+* Channel-based Knative Broker
+* Pipelines-as-code for OpenShift Serverless Functions is now available as a Technology Preview (TP).
+* You can now configure the burst and queries per second (QPS) values for net-kourier.
+* OpenShift Serverless Functions users now have the ability to override the readiness and liveness probe values in the func.yaml file for individual Quarkus functions.
+
+See "Functions development reference guide" for guidance on Quarkus, TypeScript, and Node.js functions.
+* Beginning with OpenShift Serverless 1.30.0, Kourier controller and gateway manifests have the following limits and requests by default:
+* requests:
+* cpu: 200m
+* memory: 200Mi
+* limits:
+* cpu: 500m
+* memory: 500Mi
+
+See the "Overriding Knative Serving system deployment configurations" section of OpenShift Serverless documentation.
+* The NamespacedKafka annotation, which was a Technology Preview (TP) feature, is now deprecated in favor of the standard Kafka broker with no data plane isolation.
+
+## Fixed issues
+
+* Previously, the 3scale-kourier-gateway pod was sending thousands of net-kourier-controller DNS queries daily. New queries were being sent for each NXDOMAIN reply. This continued until the correct DNS query was produced.
+
+The query now has the net-kourier-controller.knative-serving-ingress.svc.<cluster domain>. fully-qualified domain name (FQDN) by default, which solves the problem.
+
+## Known issues
+
+* Building and deploying a function using Podman version 4.6 fails with the invalid pull policy "1" error.
+
+To work around this issue, use Podman version 4.5.
+* On-cluster function building, including using Pipelines-as-code, is not supported on IBM zSystems and IBM Power.
+* Buildpack builder is not supported on IBM zSystems and IBM Power.
+
+* Overriding system deployment configurations
+
+# Red Hat OpenShift Serverless 1.29.1
+
+OpenShift Serverless 1.29.1 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+This release of OpenShift Serverless addresses Common Vulnerabilities and Exposures (CVEs), contains bug fixes, and is supported on OpenShift Container Platform 4.10 and later versions.
+
+## Fixed issues
+
+* Previously, the net-kourier-controller sometimes failed to start due to the liveness probe error. This has been fixed.
+
+* Knowledgebase solution for the net-kourier-controller liveness probe error
+
+# Red Hat OpenShift Serverless 1.29
+
+OpenShift Serverless 1.29 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+
+[IMPORTANT]
+----
+OpenShift Container Platform 4.13 is based on Red Hat Enterprise Linux (RHEL) 9.2.  RHEL 9.2 is yet to be submitted for Federal Information Processing Standards (FIPS) validation. Although Red Hat cannot commit to a specific timeframe, we expect to obtain FIPS validation for RHEL 9.0 and RHEL 9.2 modules, and later even minor releases of RHEL 9.x. Information on updates will be available in the Compliance Activities and Government Standards Knowledgebase article.
+----
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.8.
+* OpenShift Serverless now uses Knative Eventing 1.8.
+* OpenShift Serverless now uses Kourier 1.8.
+* OpenShift Serverless now uses Knative (kn) CLI 1.8.
+* OpenShift Serverless now uses Knative for Apache Kafka 1.8.
+* The kn func CLI plug-in now uses func 1.10.
+* Beginning with OpenShift Serverless 1.29, the different product versions are available as follows:
+* The latest release is available through the stable channel.
+* Releases older than the latest are available through the version-based channels.
+
+To use these, update the channel parameter in the subscription object YAML file from stable to the corresponding version-based channel, such as stable-1.29.
+
+This change allows you to receive updates not only for the latest release, but also for releases in the Maintenance phase.
+
+Additionally, you can lock the version of the Knative (kn) CLI. For details, see section "Installing the Knative CLI".
+* You can now create OpenShift Serverless functions through developer console using OpenShift Container Platform Pipelines.
+* Multi-container support for Knative Serving is now generally available (GA). This feature allows you to use a single Knative service to deploy a multi-container pod.
+* OpenShift Serverless functions can now override the readiness and liveness probe values in the func.yaml file for individual Node.js and TypeScript functions.
+* You can now configure your function to re-deploy automatically to the cluster when its source code changes in the GitHub repository. This allows for more seamless CI/CD integration.
+* Eventing integration with Service Mesh is now available as developer preview feature. The integration includes: PingSource, ApiServerSource, Knative Source for Apache Kafka, Knative Broker for Apache Kafka, Knative Sink for Apache Kafka, ContainerSource, and SinkBinding.
+* This release includes the upgraded Developer Preview for OpenShift Serverless Logic.
+* API version v1alpha1 of the Knative Operator Serving and Eventings CRDs has been removed. You need to use the v1beta1 version instead. This does not affect the existing installations, because CRDs are updated automatically when upgrading the Serverless Operator.
+
+## Known issues
+
+* When updating the secret specified in DomainMapping, simply updating the secret does not trigger the reconcile loop. You need to either rename the secret or delete the Knative Ingress resource to trigger the reconcile loop.
+* Webhook Horizontal Pod Autoscaler (HPA) settings are overridden by the OpenShift Serverless Operator. As a result, it fails to scale for higher workloads. To work around this issue, manually set the initial replica value that corresponds to your workload.
+* KafkaSource resources created before {product-title} 1.27 get stuck when being deleted. To work around the issue, after starting to delete a KafkaSource, remove the finalizer from the resource.
+* The net-kourier-controller might not be able to start due to the liveness probe error. You can work around the problem using the Knowledgebase solution.
+
+* Knowledgebase solution for the net-kourier-controller liveness probe error
+* Red Hat OpenShift Serverless Logic documentation
+
+# Red Hat OpenShift Serverless 1.28
+
+OpenShift Serverless 1.28 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+
+[IMPORTANT]
+----
+OpenShift Container Platform 4.13 is based on Red Hat Enterprise Linux (RHEL) 9.2.  RHEL 9.2 is yet to be submitted for Federal Information Processing Standards (FIPS) validation. Although Red Hat cannot commit to a specific timeframe, we expect to obtain FIPS validation for RHEL 9.0 and RHEL 9.2 modules, and later even minor releases of RHEL 9.x. Information on updates will be available in the Compliance Activities and Government Standards Knowledgebase article.
+----
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.7.
+* OpenShift Serverless now uses Knative Eventing 1.7.
+* OpenShift Serverless now uses Kourier 1.7.
+* OpenShift Serverless now uses Knative (kn) CLI 1.7.
+* OpenShift Serverless now uses Knative broker implementation for Apache Kafka 1.7.
+* The kn func CLI plug-in now uses func 1.9.1 version.
+* Node.js and TypeScript runtimes for OpenShift Serverless Functions are now Generally Available (GA).
+* Python runtime for OpenShift Serverless Functions is now available as a Technology Preview.
+* Multi-container support for Knative Serving is now available as a Technology Preview. This feature allows you to use a single Knative service to deploy a multi-container pod.
+* In OpenShift Serverless 1.29 or later, the following components of Knative Eventing will be scaled down from two pods to one:
+* imc-controller
+* imc-dispatcher
+* mt-broker-controller
+* mt-broker-filter
+* mt-broker-ingress
+* The serverless.openshift.io/enable-secret-informer-filtering annotation for the Serving CR is now deprecated. The annotation is valid only for Istio, and not for Kourier.
+
+With OpenShift Serverless 1.28, the OpenShift Serverless Operator allows injecting the environment variable ENABLE_SECRET_INFORMER_FILTERING_BY_CERT_UID for both net-istio and net-kourier.
+
+If you enable secret filtering, all of your secrets need to be labeled with  networking.internal.knative.dev/certificate-uid: "<id>". Otherwise, Knative Serving does not detect them, which leads to failures. You must label both new and existing secrets.
+
+In one of the following OpenShift Serverless releases, secret filtering will become enabled by default. To prevent failures, label your secrets in advance.
+
+## Known issues
+
+* Currently, runtimes for Python are not supported for OpenShift Serverless Functions on IBM Power, IBM zSystems, and IBM(R) LinuxONE.
+
+Node.js, TypeScript, and Quarkus functions are supported on these architectures.
+* On the Windows platform, Python functions cannot be locally built, run, or deployed using the Source-to-Image builder due to the app.sh file permissions.
+
+To work around this problem, use the Windows Subsystem for Linux.
+* KafkaSource resources created before {product-title} 1.27 get stuck when being deleted. To work around the issue, after starting to delete a KafkaSource, remove the finalizer from the resource.
+
+# Red Hat OpenShift Serverless 1.27
+
+OpenShift Serverless 1.27 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+
+[IMPORTANT]
+----
+OpenShift Serverless 1.26 is the earliest release that is fully supported on OpenShift Container Platform 4.12. OpenShift Serverless 1.25 and older does not deploy on OpenShift Container Platform 4.12.
+For this reason, before upgrading OpenShift Container Platform to version 4.12, first upgrade OpenShift Serverless to version 1.26 or 1.27.
+----
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.6.
+* OpenShift Serverless now uses Knative Eventing 1.6.
+* OpenShift Serverless now uses Kourier 1.6.
+* OpenShift Serverless now uses Knative (kn) CLI 1.6.
+* OpenShift Serverless now uses Knative Kafka 1.6.
+* The kn func CLI plug-in now uses func 1.8.1.
+* Namespace-scoped brokers are now available as a Technology Preview. Such brokers can be used, for instance, to implement role-based access control (RBAC) policies.
+* KafkaSink now uses the CloudEvent binary content mode by default. The binary content mode is more efficient than the structured mode because it uses headers in its body instead of a CloudEvent. For example, for the HTTP protocol, it uses HTTP headers.
+* You can now use the gRPC framework over the HTTP/2 protocol for external traffic using the OpenShift Route on OpenShift Container Platform 4.10 and later. This improves efficiency and speed of the communications between the client and server.
+* API version v1alpha1 of the Knative Operator Serving and Eventings CRDs is deprecated in 1.27. It will be removed in future versions. Red Hat strongly recommends to use the v1beta1 version instead. This does not affect the existing installations, because CRDs are updated automatically when upgrading the Serverless Operator.
+* The delivery timeout feature is now enabled by default. It allows you to specify the timeout for each sent HTTP request. The feature remains a Technology Preview.
+
+## Fixed issues
+
+* Previously, Knative services sometimes did not get into the Ready state, reporting waiting for the load balancer to be ready. This issue has been fixed.
+
+## Known issues
+
+* Integrating OpenShift Serverless with Red Hat OpenShift Service Mesh causes the net-kourier pod to run out of memory on startup when too many secrets are present on the cluster.
+* Namespace-scoped brokers might leave ClusterRoleBindings in the user namespace even after deletion of namespace-scoped brokers.
+
+If this happens, delete the ClusterRoleBinding named rbac-proxy-reviews-prom-rb-knative-kafka-broker-data-plane-{{.Namespace}} in the user namespace.
+
+# Red Hat OpenShift Serverless 1.26
+
+OpenShift Serverless 1.26 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless Functions with Quarkus is now GA.
+* OpenShift Serverless now uses Knative Serving 1.5.
+* OpenShift Serverless now uses Knative Eventing 1.5.
+* OpenShift Serverless now uses Kourier 1.5.
+* OpenShift Serverless now uses Knative (kn) CLI 1.5.
+* OpenShift Serverless now uses Knative Kafka 1.5.
+* OpenShift Serverless now uses Knative Operator 1.3.
+* The kn func CLI plugin now uses func 1.8.1.
+* Persistent volume claims (PVCs) are now GA. PVCs provide permanent data storage for your Knative services.
+* The new trigger filters feature is now available as a Developer Preview. It allows users to specify a set of filter expressions, where each expression evaluates to either true or false for each event.
+
+To enable new trigger filters, add the new-trigger-filters: enabled entry in the section of the KnativeEventing type in the operator config map:
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+...
+...
+spec:
+  config:
+    features:
+      new-trigger-filters: enabled
+...
+```
+
+* Knative Operator 1.3 adds the updated v1beta1 version of the API for operator.knative.dev.
+
+To update from v1alpha1 to v1beta1 in your KnativeServing and KnativeEventing custom resource config maps, edit the apiVersion key:
+Example KnativeServing custom resource config map
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+...
+```
+
+Example KnativeEventing custom resource config map
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+...
+```
+
+
+## Fixed issues
+
+* Previously, Federal Information Processing Standards (FIPS) mode was disabled for Kafka broker, Kafka source, and Kafka sink. This has been fixed, and FIPS mode is now available.
+
+* Knative documentation on new trigger filters
+
+# Red Hat OpenShift Serverless 1.25.0
+
+OpenShift Serverless 1.25.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.4.
+* OpenShift Serverless now uses Knative Eventing 1.4.
+* OpenShift Serverless now uses Kourier 1.4.
+* OpenShift Serverless now uses Knative (kn) CLI 1.4.
+* OpenShift Serverless now uses Knative Kafka 1.4.
+* The kn func CLI plugin now uses func 1.7.0.
+* Integrated development environment (IDE) plugins for creating and deploying functions are now available for Visual Studio Code and IntelliJ.
+* Knative Kafka broker is now GA. Knative Kafka broker is a highly performant implementation of the Knative broker API, directly targeting Apache Kafka.
+
+It is recommended to not use the MT-Channel-Broker, but the Knative Kafka broker instead.
+* Knative Kafka sink is now GA. A KafkaSink takes a CloudEvent and sends it to an Apache Kafka topic. Events can be specified in either structured or binary content modes.
+* Enabling TLS for internal traffic is now available as a Technology Preview.
+
+## Fixed issues
+
+* Previously, Knative Serving had an issue where the readiness probe failed if the container was restarted after a liveness probe fail. This issue has been fixed.
+
+## Known issues
+
+* The Federal Information Processing Standards (FIPS) mode is disabled for Kafka broker, Kafka source, and Kafka sink.
+* The SinkBinding object does not support custom revision names for services.
+* The Knative Serving Controller pod adds a new informer to watch secrets in the cluster. The informer includes the secrets in the cache, which increases memory consumption of the controller pod.
+
+If the pod runs out of memory, you can work around the issue by increasing the memory limit for the deployment.
+
+* Configuring TLS authentication
+
+# Red Hat OpenShift Serverless 1.24.0
+
+OpenShift Serverless 1.24.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.3.
+* OpenShift Serverless now uses Knative Eventing 1.3.
+* OpenShift Serverless now uses Kourier 1.3.
+* OpenShift Serverless now uses Knative kn CLI 1.3.
+* OpenShift Serverless now uses Knative Kafka 1.3.
+* The kn func CLI plugin now uses func 0.24.
+* Init containers support for Knative services is now generally available (GA).
+* OpenShift Serverless logic is now available as a Developer Preview. It enables defining declarative workflow models for managing serverless applications.
+* For OpenShift Container Platform, you can now use the cost management service with OpenShift Serverless.
+
+## Fixed issues
+
+* Integrating OpenShift Serverless with Red Hat OpenShift Service Mesh causes the net-istio-controller pod to run out of memory on startup when too many secrets are present on the cluster.
+
+It is now possible to enable secret filtering, which causes net-istio-controller to consider only secrets with a networking.internal.knative.dev/certificate-uid label, thus reducing the amount of memory needed.
+* The OpenShift Serverless Functions Technology Preview now uses Cloud Native Buildpacks by default to build container images.
+
+## Known issues
+
+* The Federal Information Processing Standards (FIPS) mode is disabled for Kafka broker, Kafka source, and Kafka sink.
+* In OpenShift Serverless 1.23, support for KafkaBindings and the kafka-binding webhook were removed. However, an existing kafkabindings.webhook.kafka.sources.knative.dev MutatingWebhookConfiguration might remain, pointing to the kafka-source-webhook service, which no longer exists.
+
+For certain specifications of KafkaBindings on the cluster, kafkabindings.webhook.kafka.sources.knative.dev MutatingWebhookConfiguration might be configured to pass any create and update events to various resources, such as Deployments, Knative Services, or Jobs, through the webhook, which would then fail.
+
+To work around this issue, manually delete kafkabindings.webhook.kafka.sources.knative.dev MutatingWebhookConfiguration from the cluster after upgrading to OpenShift Serverless 1.23:
+
+```terminal
+$ oc delete mutatingwebhookconfiguration kafkabindings.webhook.kafka.sources.knative.dev
+```
+
+
+# Red Hat OpenShift Serverless 1.23.0
+
+OpenShift Serverless 1.23.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.2.
+* OpenShift Serverless now uses Knative Eventing 1.2.
+* OpenShift Serverless now uses Kourier 1.2.
+* OpenShift Serverless now uses Knative (kn) CLI 1.2.
+* OpenShift Serverless now uses Knative Kafka 1.2.
+* The kn func CLI plugin now uses func 0.24.
+* It is now possible to use the kafka.eventing.knative.dev/external.topic annotation with the Kafka broker. This annotation makes it possible to use an existing externally managed topic instead of the broker creating its own internal topic.
+* The kafka-ch-controller and kafka-webhook Kafka components no longer exist. These components have been replaced by the kafka-webhook-eventing component.
+* The OpenShift Serverless Functions Technology Preview now uses Source-to-Image (S2I) by default to build container images.
+
+## Known issues
+
+* The Federal Information Processing Standards (FIPS) mode is disabled for Kafka broker, Kafka source, and Kafka sink.
+* If you delete a namespace that includes a Kafka broker, the namespace finalizer may fail to be removed if the broker's auth.secret.ref.name secret is deleted before the broker.
+* Running OpenShift Serverless with a large number of Knative services can cause Knative activator pods to run close to their default memory limits of 600MB. These pods might be restarted if memory consumption reaches this limit. Requests and limits for the activator deployment can be configured by modifying the KnativeServing custom resource:
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec:
+  deployments:
+  - name: activator
+    resources:
+    - container: activator
+      requests:
+        cpu: 300m
+        memory: 60Mi
+      limits:
+        cpu: 1000m
+        memory: 1000Mi
+```
+
+* If you are using Cloud Native Buildpacks as the local build strategy for a function, kn func is unable to automatically start podman or use an SSH tunnel to a remote daemon. The workaround for these issues is to have a Docker or podman daemon already running on the local development computer before deploying a function.
+* On-cluster function builds currently fail for Quarkus and Golang runtimes. They work correctly for Node, Typescript, Python, and Springboot runtimes.
+
+* Source-to-Image
+
+# Red Hat OpenShift Serverless 1.22.0
+
+OpenShift Serverless 1.22.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.1.
+* OpenShift Serverless now uses Knative Eventing 1.1.
+* OpenShift Serverless now uses Kourier 1.1.
+* OpenShift Serverless now uses Knative (kn) CLI 1.1.
+* OpenShift Serverless now uses Knative Kafka 1.1.
+* The kn func CLI plugin now uses func 0.23.
+* Init containers support for Knative services is now available as a Technology Preview.
+* Persistent volume claim (PVC) support for Knative services is now available as a Technology Preview.
+* The knative-serving, knative-serving-ingress, knative-eventing and knative-kafka system namespaces now have the knative.openshift.io/part-of: "openshift-serverless" label by default.
+* The Knative Eventing - Kafka Broker/Trigger dashboard has been added, which allows visualizing Kafka broker and trigger metrics in the web console.
+* The Knative Eventing - KafkaSink dashboard has been added, which allows visualizing KafkaSink metrics in the web console.
+* The Knative Eventing - Broker/Trigger dashboard is now called Knative Eventing - Channel-based Broker/Trigger.
+* The knative.openshift.io/part-of: "openshift-serverless" label has substituted the knative.openshift.io/system-namespace label.
+* Naming style in Knative Serving YAML configuration files changed from camel case (ExampleName) to hyphen style (example-name). Beginning with this release, use the hyphen style notation when creating or editing Knative Serving YAML configuration files.
+
+## Known issues
+
+* The Federal Information Processing Standards (FIPS) mode is disabled for Kafka broker, Kafka source, and Kafka sink.
+
+# Red Hat OpenShift Serverless 1.21.0
+
+OpenShift Serverless 1.21.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 1.0
+* OpenShift Serverless now uses Knative Eventing 1.0.
+* OpenShift Serverless now uses Kourier 1.0.
+* OpenShift Serverless now uses Knative (kn) CLI 1.0.
+* OpenShift Serverless now uses Knative Kafka 1.0.
+* The kn func CLI plugin now uses func 0.21.
+* The Kafka sink is now available as a Technology Preview.
+* The Knative open source project has begun to deprecate camel-cased configuration keys in favor of using kebab-cased keys consistently. As a result, the defaultExternalScheme key, previously mentioned in the OpenShift Serverless 1.18.0 release notes, is now deprecated and replaced by the default-external-scheme key. Usage instructions for the key remain the same.
+
+## Fixed issues
+
+* In OpenShift Serverless 1.20.0, there was an event delivery issue affecting the use of kn event send to send events to a service. This issue is now fixed.
+* In OpenShift Serverless 1.20.0 (func 0.20), TypeScript functions created with the http template failed to deploy on the cluster. This issue is now fixed.
+* In OpenShift Serverless 1.20.0 (func 0.20), deploying a function using the gcr.io registry failed with an error. This issue is now fixed.
+* In OpenShift Serverless 1.20.0 (func 0.20), creating a Springboot function project directory with the kn func create command and then running the kn func build command failed with an error message. This issue is now fixed.
+* In OpenShift Serverless 1.19.0 (func 0.19), some runtimes were unable to build a function by using podman. This issue is now fixed.
+
+## Known issues
+
+* Currently, the domain mapping controller cannot process the URI of a broker, which contains a path that is currently not supported.
+
+This means that, if you want to use a DomainMapping custom resource (CR) to map a custom domain to a broker, you must configure the DomainMapping CR with the broker&#8217;s ingress service, and append the exact path of the broker to the custom domain:
+Example DomainMapping CR
+
+```yaml
+apiVersion: serving.knative.dev/v1alpha1
+kind: DomainMapping
+metadata:
+  name: <domain-name>
+  namespace: knative-eventing
+spec:
+  ref:
+    name: broker-ingress
+    kind: Service
+    apiVersion: v1
+```
+
+
+The URI for the broker is then <domain-name>/<broker-namespace>/<broker-name>.
+
+# Red Hat OpenShift Serverless 1.20.0
+
+OpenShift Serverless 1.20.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 0.26.
+* OpenShift Serverless now uses Knative Eventing 0.26.
+* OpenShift Serverless now uses Kourier 0.26.
+* OpenShift Serverless now uses Knative (kn) CLI 0.26.
+* OpenShift Serverless now uses Knative Kafka 0.26.
+* The kn func CLI plugin now uses func 0.20.
+* The Kafka broker is now available as a Technology Preview.
+
+[IMPORTANT]
+----
+The Kafka broker, which is currently in Technology Preview, is not supported on FIPS.
+----
+* The kn event plugin is now available as a Technology Preview.
+* The --min-scale and --max-scale flags for the kn service create command have been deprecated. Use the --scale-min and --scale-max flags instead.
+
+## Known issues
+
+* OpenShift Serverless deploys Knative services with a default address that uses HTTPS. When sending an event to a resource inside the cluster, the sender does not have the cluster certificate authority (CA) configured. This causes event delivery to fail, unless the cluster uses globally accepted certificates.
+
+For example, an event delivery to a publicly accessible address works:
+
+```terminal
+$ kn event send --to-url https://ce-api.foo.example.com/
+```
+
+
+On the other hand, this delivery fails if the service uses a public address with an HTTPS certificate issued by a custom CA:
+
+```terminal
+$ kn event send --to Service:serving.knative.dev/v1:event-display
+```
+
+
+Sending an event to other addressable objects, such as brokers or channels, is not affected by this issue and works as expected.
+* The Kafka broker currently does not work on a cluster with Federal Information Processing Standards (FIPS) mode enabled.
+* If you create a Springboot function project directory with the kn func create command, subsequent running of the kn func build command fails with this error message:
+
+```terminal
+[analyzer] no stack metadata found at path ''
+[analyzer] ERROR: failed to : set API for buildpack 'paketo-buildpacks/ca-certificates@3.0.2': buildpack API version '0.7' is incompatible with the lifecycle
+```
+
+
+As a workaround, you can change the builder property to gcr.io/paketo-buildpacks/builder:base in the function configuration file func.yaml.
+* Deploying a function using the gcr.io registry fails with this error message:
+
+```terminal
+Error: failed to get credentials: failed to verify credentials: status code: 404
+```
+
+
+As a workaround, use a different registry than gcr.io, such as quay.io or docker.io.
+* TypeScript functions created with the http template fail to deploy on the cluster.
+
+As a workaround, in the func.yaml file, replace the following section:
+
+```terminal
+buildEnvs: []
+```
+
+
+with this:
+
+```terminal
+buildEnvs:
+- name: BP_NODE_RUN_SCRIPTS
+  value: build
+```
+
+* In func version 0.20, some runtimes might be unable to build a function by using podman. You might see an error message similar to the following:
+
+```terminal
+ERROR: failed to image: error during connect: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.40/info": EOF
+```
+
+* The following workaround exists for this issue:
+1. Update the podman service by adding --time=0 to the service ExecStart definition:
+Example service configuration
+
+```terminal
+ExecStart=/usr/bin/podman $LOGGING system service --time=0
+```
+
+2. Restart the podman service by running the following commands:
+
+```terminal
+$ systemctl --user daemon-reload
+```
+
+
+```terminal
+$ systemctl restart --user podman.socket
+```
+
+* Alternatively, you can expose the podman API by using TCP:
+
+```terminal
+$ podman system service --time=0 tcp:127.0.0.1:5534 &
+export DOCKER_HOST=tcp://127.0.0.1:5534
+```
+
+
+# Red Hat OpenShift Serverless 1.19.0
+
+OpenShift Serverless 1.19.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 0.25.
+* OpenShift Serverless now uses Knative Eventing 0.25.
+* OpenShift Serverless now uses Kourier 0.25.
+* OpenShift Serverless now uses Knative (kn) CLI 0.25.
+* OpenShift Serverless now uses Knative Kafka 0.25.
+* The kn func CLI plugin now uses func 0.19.
+* The KafkaBinding API is deprecated in OpenShift Serverless 1.19.0 and will be removed in a future release.
+* HTTPS redirection is now supported and can be configured either globally for a cluster or per each Knative service.
+
+## Fixed issues
+
+* In previous releases, the Kafka channel dispatcher waited only for the local commit to succeed before responding, which might have caused lost events in the case of an Apache Kafka node failure. The Kafka channel dispatcher now waits for all in-sync replicas to commit before responding.
+
+## Known issues
+
+* In func version 0.19, some runtimes might be unable to build a function by using podman. You might see an error message similar to the following:
+
+```terminal
+ERROR: failed to image: error during connect: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.40/info": EOF
+```
+
+* The following workaround exists for this issue:
+1. Update the podman service by adding --time=0 to the service ExecStart definition:
+Example service configuration
+
+```terminal
+ExecStart=/usr/bin/podman $LOGGING system service --time=0
+```
+
+2. Restart the podman service by running the following commands:
+
+```terminal
+$ systemctl --user daemon-reload
+```
+
+
+```terminal
+$ systemctl restart --user podman.socket
+```
+
+* Alternatively, you can expose the podman API by using TCP:
+
+```terminal
+$ podman system service --time=0 tcp:127.0.0.1:5534 &
+export DOCKER_HOST=tcp://127.0.0.1:5534
+```
+
+
+# Red Hat OpenShift Serverless 1.18.0
+
+OpenShift Serverless 1.18.0 is now available. New features, updates, and known issues that pertain to OpenShift Serverless on OpenShift Container Platform are included in the following notes.
+
+## New features
+
+* OpenShift Serverless now uses Knative Serving 0.24.0.
+* OpenShift Serverless now uses Knative Eventing 0.24.0.
+* OpenShift Serverless now uses Kourier 0.24.0.
+* OpenShift Serverless now uses Knative (kn) CLI 0.24.0.
+* OpenShift Serverless now uses Knative Kafka 0.24.7.
+* The kn func CLI plugin now uses func 0.18.0.
+* In the upcoming OpenShift Serverless 1.19.0 release, the URL scheme of external routes will default to HTTPS for enhanced security.
+
+If you do not want this change to apply for your workloads, you can override the default setting before upgrading to 1.19.0, by adding the following YAML to your KnativeServing custom resource (CR):
+
+```yaml
+...
+spec:
+  config:
+    network:
+      defaultExternalScheme: "http"
+...
+```
+
+
+If you want the change to apply in 1.18.0 already, add the following YAML:
+
+```yaml
+...
+spec:
+  config:
+    network:
+      defaultExternalScheme: "https"
+...
+```
+
+* In the upcoming OpenShift Serverless 1.19.0 release, the default service type by which the Kourier Gateway is exposed will be ClusterIP and not LoadBalancer.
+
+If you do not want this change to apply to your workloads, you can override the default setting before upgrading to 1.19.0, by adding the following YAML to your KnativeServing custom resource (CR):
+
+```yaml
+...
+spec:
+  ingress:
+    kourier:
+      service-type: LoadBalancer
+...
+```
+
+* You can now use emptyDir volumes with OpenShift Serverless. See the OpenShift Serverless documentation about Knative Serving for details.
+* Rust templates are now available when you create a function using kn func.
+
+## Fixed issues
+
+* The prior 1.4 version of Camel-K was not compatible with OpenShift Serverless 1.17.0. The issue in Camel-K has been fixed, and Camel-K version 1.4.1 can be used with OpenShift Serverless 1.17.0.
+* Previously, if you created a new subscription for a Kafka channel, or a new Kafka source, a delay was possible in the Kafka data plane becoming ready to dispatch messages after the newly created subscription or sink reported a ready status.
+
+As a result, messages that were sent during the time when the data plane was not reporting a ready status, might not have been delivered to the subscriber or sink.
+
+In OpenShift Serverless 1.18.0, the issue is fixed and the initial messages are no longer lost. For more information about the issue, see Knowledgebase Article #6343981.
+
+## Known issues
+
+* Older versions of the Knative kn CLI might use older versions of the Knative Serving and Knative Eventing APIs. For example, version 0.23.2 of the kn CLI uses the v1alpha1 API version.
+
+On the other hand, newer releases of OpenShift Serverless might no longer support older API versions. For example, OpenShift Serverless 1.18.0 no longer supports version v1alpha1 of the kafkasources.sources.knative.dev API.
+
+Consequently, using an older version of the Knative kn CLI with a newer OpenShift Serverless might produce an error because the kn cannot find the outdated API. For example, version 0.23.2 of the kn CLI does not work with OpenShift Serverless 1.18.0.
+
+To avoid issues, use the latest kn CLI version available for your OpenShift Serverless release. For OpenShift Serverless 1.18.0, use Knative kn CLI 0.24.0.

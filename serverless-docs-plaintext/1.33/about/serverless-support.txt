@@ -1,0 +1,148 @@
+# OpenShift Serverless support
+
+
+If you experience difficulty with a procedure described in this documentation, visit the Red Hat Customer Portal at http://access.redhat.com. You can use the Red Hat Customer Portal to search or browse through the Red Hat Knowledgebase of technical support articles about Red Hat products. You can also submit a support case to Red Hat Global Support Services (GSS), or access other product documentation.
+If you have a suggestion for improving this guide or have found an error, you can submit a Jira issue for the most relevant documentation component. Provide specific details, such as the section number, guide name, and OpenShift Serverless version so we can easily locate the content.
+
+[NOTE]
+----
+The following section on defining cluster size requirements applies to these distributions:
+* OpenShift Container Platform
+* OpenShift Dedicated
+----
+
+# About the Red Hat Knowledgebase
+
+The Red Hat Knowledgebase provides rich content aimed at helping you make the most of Red Hat&#8217;s products and technologies. The Red Hat Knowledgebase consists of articles, product documentation, and videos outlining best practices on installing, configuring, and using Red Hat products. In addition, you can search for solutions to known issues, each providing concise root cause descriptions and remedial steps.
+
+# Searching the Red Hat Knowledgebase
+
+In the event of an OpenShift Container Platform issue, you can perform an initial search to determine if a solution already exists within the Red Hat Knowledgebase.
+
+* You have a Red Hat Customer Portal account.
+
+1. Log in to the Red Hat Customer Portal.
+2. In the main Red Hat Customer Portal search field, input keywords and strings relating to the problem, including:
+* OpenShift Container Platform components (such as etcd)
+* Related procedure (such as installation)
+* Warnings, error messages, and other outputs related to explicit failures
+3. Click Search.
+4. Select the OpenShift Container Platform product filter.
+5. Select the Knowledgebase content type filter.
+
+# Submitting a support case
+
+* You have access to the cluster as a user with the cluster-admin role.
+* You have installed the OpenShift CLI (oc).
+* You have a Red Hat Customer Portal account.
+* You have a Red Hat standard or premium Subscription.
+
+1. Log in to the Red Hat Customer Portal and select SUPPORT CASES -> Open a case.
+2. Select the appropriate category for your issue (such as Defect / Bug), product (OpenShift Container Platform), and product version
+if this is not already autofilled).
+3. Review the list of suggested Red Hat Knowledgebase solutions for a potential match against the problem that is being reported. If the suggested articles do not address the issue, click Continue.
+4. Enter a concise but descriptive problem summary and further details about the symptoms being experienced, as well as your expectations.
+5. Review the updated list of suggested Red Hat Knowledgebase solutions for a potential match against the problem that is being reported. The list is refined as you provide more information during the case creation process. If the suggested articles do not address the issue, click Continue.
+6. Ensure that the account information presented is as expected, and if not, amend accordingly.
+7. Check that the autofilled OpenShift Container Platform Cluster ID is correct. If it is not, manually obtain your cluster ID.
+* To manually obtain your cluster ID using the OpenShift Container Platform web console:
+1. Navigate to Home -> Dashboards -> Overview.
+2. Find the value in the Cluster ID field of the Details section.
+* Alternatively, it is possible to open a new support case through the OpenShift Container Platform web console and have your cluster ID autofilled.
+1. From the toolbar, navigate to (?) Help -> Open Support Case.
+2. The Cluster ID value is autofilled.
+* To obtain your cluster ID using the OpenShift CLI (oc), run the following command:
+
+```terminal
+$ oc get clusterversion -o jsonpath='{.items[].spec.clusterID}{"\n"}'
+```
+
+8. Complete the following questions where prompted and then click Continue:
+* Where are you experiencing the behavior? What environment?
+* When does the behavior occur? Frequency? Repeatedly? At certain times?
+* What information can you provide around time-frames and the business impact?
+9. Upload relevant diagnostic data files and click Continue.
+
+It is recommended to include data gathered using the oc adm must-gather command as a starting point, plus any issue specific data that is not collected by that command.
+
+1. Input relevant case management details and click Continue.
+2. Preview the case details and click Submit.
+
+# Gathering diagnostic information for support
+
+When you open a support case, it is helpful to provide debugging information about your cluster to Red Hat Support. The must-gather tool enables you to collect diagnostic information about your OpenShift Container Platform cluster, including data related to OpenShift Serverless. For prompt support, supply diagnostic information for both OpenShift Container Platform and OpenShift Serverless.
+
+## About the must-gather tool
+
+The oc adm must-gather CLI command collects the information from your cluster that is most likely needed for debugging issues, including:
+
+* Resource definitions
+* Service logs
+
+By default, the oc adm must-gather command uses the default plugin image and writes into ./must-gather.local.
+
+Alternatively, you can collect specific information by running the command with the appropriate arguments as described in the following sections:
+
+* To collect data related to one or more specific features, use the --image argument with an image, as listed in a following section.
+
+For example:
+
+```terminal
+$ oc adm must-gather  --image=registry.redhat.io/container-native-virtualization/cnv-must-gather-rhel8:v4.13.0
+```
+
+* To collect the audit logs, use the - /usr/bin/gather_audit_logs argument, as described in a following section.
+
+For example:
+
+```terminal
+$ oc adm must-gather -- /usr/bin/gather_audit_logs
+```
+
+
+[NOTE]
+----
+Audit logs are not collected as part of the default set of information to reduce the size of the files.
+----
+
+When you run oc adm must-gather, a new pod with a random name is created in a new project on the cluster. The data is collected on that pod and saved in a new directory that starts with must-gather.local. This directory is created in the current working directory.
+
+For example:
+
+
+```terminal
+NAMESPACE                      NAME                 READY   STATUS      RESTARTS      AGE
+...
+openshift-must-gather-5drcj    must-gather-bklx4    2/2     Running     0             72s
+openshift-must-gather-5drcj    must-gather-s8sdh    2/2     Running     0             72s
+...
+```
+
+
+Optionally, you can run the oc adm must-gather command in a specific namespace by using the --run-namespace option.
+
+For example:
+
+
+```terminal
+$ oc adm must-gather --run-namespace <namespace> --image=registry.redhat.io/container-native-virtualization/cnv-must-gather-rhel8:v4.13.0
+```
+
+
+## About collecting OpenShift Serverless data
+
+You can use the oc adm must-gather CLI command to collect information about your cluster, including features and objects associated with OpenShift Serverless. To collect OpenShift Serverless data with must-gather, you must specify the OpenShift Serverless image and the image tag for your installed version of OpenShift Serverless.
+
+* Install the OpenShift CLI (oc).
+
+* Collect data by using the oc adm must-gather command:
+
+```terminal
+$ oc adm must-gather --image=registry.redhat.io/openshift-serverless-1/svls-must-gather-rhel8:<image_version_tag>
+```
+
+Example command
+
+```terminal
+$ oc adm must-gather --image=registry.redhat.io/openshift-serverless-1/svls-must-gather-rhel8:1.14.0
+```

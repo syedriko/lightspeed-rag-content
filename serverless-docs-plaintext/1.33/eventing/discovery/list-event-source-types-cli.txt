@@ -1,0 +1,31 @@
+# Listing event source types from the command line
+
+Using the Knative (kn) CLI provides a streamlined and intuitive user interface to view available event source types on your cluster.
+
+# Listing available event source types by using the Knative CLI
+
+You can list event source types that can be created and used on your cluster by using the kn source list-types CLI command.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on the cluster.
+* You have installed the Knative (kn) CLI.
+
+1. List the available event source types in the terminal:
+
+```terminal
+$ kn source list-types
+```
+
+Example output
+
+```terminal
+TYPE              NAME                                            DESCRIPTION
+ApiServerSource   apiserversources.sources.knative.dev            Watch and send Kubernetes API events to a sink
+PingSource        pingsources.sources.knative.dev                 Periodically send ping events to a sink
+SinkBinding       sinkbindings.sources.knative.dev                Binding for connecting a PodSpecable to a sink
+```
+
+2. Optional: On OpenShift Container Platform, you can also list the available event source types in YAML format:
+
+```terminal
+$ kn source list-types -o yaml
+```

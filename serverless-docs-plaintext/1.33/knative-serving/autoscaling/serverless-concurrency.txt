@@ -1,0 +1,102 @@
+# Concurrency
+
+Concurrency determines the number of simultaneous requests that can be processed by each replica of an application at any given time. Concurrency can be configured as a soft limit or a hard limit:
+* A soft limit is a targeted requests limit, rather than a strictly enforced bound. For example, if there is a sudden burst of traffic, the soft limit target can be exceeded.
+* A hard limit is a strictly enforced upper bound requests limit. If concurrency reaches the hard limit, surplus requests are buffered and must wait until there is enough free capacity to execute the requests.
+
+[IMPORTANT]
+----
+Using a hard limit configuration is only recommended if there is a clear use case for it with your application. Having a low, hard limit specified may have a negative impact on the throughput and latency of an application, and might cause cold starts.
+----
+Adding a soft target and a hard limit means that the autoscaler targets the soft target number of concurrent requests, but imposes a hard limit of the hard limit value for the maximum number of requests.
+If the hard limit value is less than the soft limit value, the soft limit value is tuned down, because there is no need to target more requests than the number that can actually be handled.
+
+# Configuring a soft concurrency target
+
+A soft limit is a targeted requests limit, rather than a strictly enforced bound. For example, if there is a sudden burst of traffic, the soft limit target can be exceeded. You can specify a soft concurrency target for your Knative service by setting the autoscaling.knative.dev/target annotation in the spec, or by using the kn service command with the correct flags.
+
+* Optional: Set the autoscaling.knative.dev/target annotation for your Knative service in the spec of the Service custom resource:
+Example service spec
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: showcase
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/target: "200"
+```
+
+* Optional: Use the kn service command to specify the --concurrency-target flag:
+
+```terminal
+$ kn service create <service_name> --image <image_uri> --concurrency-target <integer>
+```
+
+Example command to create a service with a concurrency target of 50 requests
+
+```terminal
+$ kn service create showcase --image quay.io/openshift-knative/showcase --concurrency-target 50
+```
+
+
+# Configuring a hard concurrency limit
+
+A hard concurrency limit is a strictly enforced upper bound requests limit. If concurrency reaches the hard limit, surplus requests are buffered and must wait until there is enough free capacity to execute the requests. You can specify a hard concurrency limit for your Knative service by modifying the containerConcurrency spec, or by using the kn service command with the correct flags.
+
+* Optional: Set the containerConcurrency spec for your Knative service in the spec of the Service custom resource:
+Example service spec
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: showcase
+  namespace: default
+spec:
+  template:
+    spec:
+      containerConcurrency: 50
+```
+
+
+The default value is 0, which means that there is no limit on the number of simultaneous requests that are permitted to flow into one replica of the service at a time.
+
+A value greater than 0 specifies the exact number of requests that are permitted to flow into one replica of the service at a time. This example would enable a hard concurrency limit of 50 requests.
+* Optional: Use the kn service command to specify the --concurrency-limit flag:
+
+```terminal
+$ kn service create <service_name> --image <image_uri> --concurrency-limit <integer>
+```
+
+Example command to create a service with a concurrency limit of 50 requests
+
+```terminal
+$ kn service create showcase --image quay.io/openshift-knative/showcase --concurrency-limit 50
+```
+
+
+# Concurrency target utilization
+
+This value specifies the percentage of the concurrency limit that is actually targeted by the autoscaler. This is also known as specifying the hotness at which a replica runs, which enables the autoscaler to scale up before the defined hard limit is reached.
+
+For example, if the containerConcurrency value is set to 10, and the target-utilization-percentage value is set to 70 percent, the autoscaler creates a new replica when the average number of concurrent requests across all existing replicas reaches 7. Requests numbered 7 to 10 are still sent to the existing replicas, but additional replicas are started in anticipation of being required after the containerConcurrency value is reached.
+
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: showcase
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/target-utilization-percentage: "70"
+...
+```

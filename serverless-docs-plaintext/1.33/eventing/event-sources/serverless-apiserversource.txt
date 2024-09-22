@@ -1,0 +1,550 @@
+# Creating an API server source
+
+
+The API server source is an event source that can be used to connect an event sink, such as a Knative service, to the Kubernetes API server. The API server source watches for Kubernetes events and forwards them to the Knative Eventing broker.
+
+# Creating an API server source by using the web console
+
+After Knative Eventing is installed on your cluster, you can create an API server source by using the web console. Using the OpenShift Container Platform web console provides a streamlined and intuitive user interface to create an event source.
+
+* You have logged in to the OpenShift Container Platform web console.
+* The OpenShift Serverless Operator and Knative Eventing are installed on the cluster.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+
+[NOTE]
+----
+If you want to re-use an existing service account, you can modify your existing ServiceAccount resource to include the required permissions instead of creating a new resource.
+----
+
+1. Create a service account, role, and role binding for the event source as a YAML file:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: events-sa
+  namespace: default 1
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: event-watcher
+  namespace: default 1
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: k8s-ra-event-watcher
+  namespace: default 1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: event-watcher
+subjects:
+  - kind: ServiceAccount
+    name: events-sa
+    namespace: default 1
+```
+
+Change this namespace to the namespace that you have selected for installing the event source.
+2. Apply the YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+3. In the Developer perspective, navigate to +Add → Event Source. The  Event Sources page is displayed.
+4. Optional: If you have multiple providers for your event sources, select the required provider from the Providers list to filter the available event sources from the provider.
+5. Select ApiServerSource and then click Create Event Source. The  Create Event Source page is displayed.
+6. Configure the ApiServerSource settings by using the Form view or YAML view:
+
+[NOTE]
+----
+You can switch between the Form view and YAML view. The data is persisted when switching between the views.
+----
+1. Enter v1 as the APIVERSION and Event as the KIND.
+2. Select the Service Account Name for the service account that you created.
+3. In the Target section, select your event sink. This can be either a Resource or a URI:
+1. Select Resource to use a channel, broker, or service as an event sink for the event source.
+2. Select URI to specify a Uniform Resource Identifier (URI) where the events are routed to.
+7. Click Create.
+
+* After you have created the API server source, check that it is connected to the event sink by viewing it in the Topology view.
+![ApiServerSource Topology view]
+
+
+[NOTE]
+----
+If a URI sink is used, you can modify the URI by right-clicking on URI sink -> Edit URI.
+----
+
+1. Navigate to the Topology view.
+2. Right-click the API server source and select Delete ApiServerSource.
+![Delete the ApiServerSource]
+
+# Creating an API server source by using the Knative CLI
+
+You can use the kn source apiserver create command to create an API server source by using the kn CLI. Using the kn CLI to create an API server source provides a more streamlined and intuitive user interface than modifying YAML files directly.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on the cluster.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+* You have installed the Knative (kn) CLI.
+
+
+[NOTE]
+----
+If you want to re-use an existing service account, you can modify your existing ServiceAccount resource to include the required permissions instead of creating a new resource.
+----
+
+1. Create a service account, role, and role binding for the event source as a YAML file:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: events-sa
+  namespace: default 1
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: event-watcher
+  namespace: default 1
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: k8s-ra-event-watcher
+  namespace: default 1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: event-watcher
+subjects:
+  - kind: ServiceAccount
+    name: events-sa
+    namespace: default 1
+```
+
+Change this namespace to the namespace that you have selected for installing the event source.
+2. Apply the YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+3. Create an API server source that has an event sink. In the following example, the sink is a broker:
+
+```terminal
+$ kn source apiserver create <event_source_name> --sink broker:<broker_name> --resource "event:v1" --service-account <service_account_name> --mode Resource
+```
+
+4. To check that the API server source is set up correctly, create a Knative service that dumps incoming messages to its log:
+
+```terminal
+$ kn service create event-display --image quay.io/openshift-knative/showcase
+```
+
+5. If you used a broker as an event sink, create a trigger to filter events from the default broker to the service:
+
+```terminal
+$ kn trigger create <trigger_name> --sink ksvc:event-display
+```
+
+6. Create events by launching a pod in the default namespace:
+
+```terminal
+$ oc create deployment event-origin --image quay.io/openshift-knative/showcase
+```
+
+7. Check that the controller is mapped correctly by inspecting the output generated by the following command:
+
+```terminal
+$ kn source apiserver describe <source_name>
+```
+
+Example output
+
+```terminal
+Name:                mysource
+Namespace:           default
+Annotations:         sources.knative.dev/creator=developer, sources.knative.dev/lastModifier=developer
+Age:                 3m
+ServiceAccountName:  events-sa
+Mode:                Resource
+Sink:
+  Name:       default
+  Namespace:  default
+  Kind:       Broker (eventing.knative.dev/v1)
+Resources:
+  Kind:        event (v1)
+  Controller:  false
+Conditions:
+  OK TYPE                     AGE REASON
+  ++ Ready                     3m
+  ++ Deployed                  3m
+  ++ SinkProvided              3m
+  ++ SufficientPermissions     3m
+  ++ EventTypesProvided        3m
+```
+
+
+To verify that the Kubernetes events were sent to Knative, look at the event-display logs or use web browser to see the events.
+
+* To view the events in a web browser, open the link returned by the following command:
+
+```terminal
+$ kn service describe event-display -o url
+```
+
+Example browser page
+![Example visualization of ApiServerSource event]
+* Alternatively, to see the logs in the terminal, view the event-display logs for the pods by entering the following command:
+
+```terminal
+$ oc logs $(oc get pod -o name | grep event-display) -c user-container
+```
+
+Example output
+
+```terminal
+☁️  cloudevents.Event
+Validation: valid
+Context Attributes,
+  specversion: 1.0
+  type: dev.knative.apiserver.resource.update
+  datacontenttype: application/json
+  ...
+Data,
+  {
+    "apiVersion": "v1",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{event-origin}",
+      "kind": "Pod",
+      "name": "event-origin",
+      "namespace": "default",
+       .....
+    },
+    "kind": "Event",
+    "message": "Started container",
+    "metadata": {
+      "name": "event-origin.159d7608e3a3572c",
+      "namespace": "default",
+      ....
+    },
+    "reason": "Started",
+    ...
+  }
+```
+
+
+1. Delete the trigger:
+
+```terminal
+$ kn trigger delete <trigger_name>
+```
+
+2. Delete the event source:
+
+```terminal
+$ kn source apiserver delete <source_name>
+```
+
+3. Delete the service account, cluster role, and cluster binding:
+
+```terminal
+$ oc delete -f authentication.yaml
+```
+
+
+## Knative CLI sink flag
+
+When you create an event source by using the Knative (kn) CLI, you can specify a sink where events are sent to from that resource by using the --sink flag. The sink can be any addressable or callable resource that can receive incoming events from other resources.
+
+The following example creates a sink binding that uses a service, http://event-display.svc.cluster.local, as the sink:
+
+
+```terminal
+$ kn source binding create bind-heartbeat \
+  --namespace sinkbinding-example \
+  --subject "Job:batch/v1:app=heartbeat-cron" \
+  --sink http://event-display.svc.cluster.local \ 1
+  --ce-override "sink=bound"
+```
+
+
+svc in http://event-display.svc.cluster.local determines that the sink is a Knative service. Other default sink prefixes include channel, and broker.
+
+# Creating an API server source by using YAML files
+
+Creating Knative resources by using YAML files uses a declarative API, which enables you to describe event sources declaratively and in a reproducible manner. To create an API server source by using YAML, you must create a YAML file that defines an ApiServerSource object, then apply it by using the oc apply command.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on the cluster.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have created the default broker in the same namespace as the one defined in the API server source YAML file.
+* Install the OpenShift CLI (oc).
+
+
+[NOTE]
+----
+If you want to re-use an existing service account, you can modify your existing ServiceAccount resource to include the required permissions instead of creating a new resource.
+----
+
+1. Create a service account, role, and role binding for the event source as a YAML file:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: events-sa
+  namespace: default 1
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: event-watcher
+  namespace: default 1
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: k8s-ra-event-watcher
+  namespace: default 1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: event-watcher
+subjects:
+  - kind: ServiceAccount
+    name: events-sa
+    namespace: default 1
+```
+
+Change this namespace to the namespace that you have selected for installing the event source.
+2. Apply the YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+3. Create an API server source as a YAML file:
+
+```yaml
+apiVersion: sources.knative.dev/v1alpha1
+kind: ApiServerSource
+metadata:
+  name: testevents
+spec:
+  serviceAccountName: events-sa
+  mode: Resource
+  resources:
+    - apiVersion: v1
+      kind: Event
+  sink:
+    ref:
+      apiVersion: eventing.knative.dev/v1
+      kind: Broker
+      name: default
+```
+
+4. Apply the ApiServerSource YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+5. To check that the API server source is set up correctly, create a Knative service as a YAML file that dumps incoming messages to its log:
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: event-display
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - image: quay.io/openshift-knative/showcase
+```
+
+6. Apply the Service YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+7. Create a Trigger object as a YAML file that filters events from the default broker to the service created in the previous step:
+
+```yaml
+apiVersion: eventing.knative.dev/v1
+kind: Trigger
+metadata:
+  name: event-display-trigger
+  namespace: default
+spec:
+  broker: default
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: event-display
+```
+
+8. Apply the Trigger YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+9. Create events by launching a pod in the default namespace:
+
+```terminal
+$ oc create deployment event-origin --image=quay.io/openshift-knative/showcase
+```
+
+10. Check that the controller is mapped correctly, by entering the following command and inspecting the output:
+
+```terminal
+$ oc get apiserversource.sources.knative.dev testevents -o yaml
+```
+
+Example output
+
+```yaml
+apiVersion: sources.knative.dev/v1alpha1
+kind: ApiServerSource
+metadata:
+  annotations:
+  creationTimestamp: "2020-04-07T17:24:54Z"
+  generation: 1
+  name: testevents
+  namespace: default
+  resourceVersion: "62868"
+  selfLink: /apis/sources.knative.dev/v1alpha1/namespaces/default/apiserversources/testevents2
+  uid: 1603d863-bb06-4d1c-b371-f580b4db99fa
+spec:
+  mode: Resource
+  resources:
+  - apiVersion: v1
+    controller: false
+    controllerSelector:
+      apiVersion: ""
+      kind: ""
+      name: ""
+      uid: ""
+    kind: Event
+    labelSelector: {}
+  serviceAccountName: events-sa
+  sink:
+    ref:
+      apiVersion: eventing.knative.dev/v1
+      kind: Broker
+      name: default
+```
+
+
+To verify that the Kubernetes events were sent to Knative, you can look at the event-display logs or use web browser to see the events.
+
+* To view the events in a web browser, open the link returned by the following command:
+
+```terminal
+$ oc get ksvc event-display -o jsonpath='{.status.url}'
+```
+
+Example browser page
+![Example visualization of ApiServerSource event]
+* To see the logs in the terminal, view the event-display logs for the pods by entering the following command:
+
+```terminal
+$ oc logs $(oc get pod -o name | grep event-display) -c user-container
+```
+
+Example output
+
+```terminal
+☁️  cloudevents.Event
+Validation: valid
+Context Attributes,
+  specversion: 1.0
+  type: dev.knative.apiserver.resource.update
+  datacontenttype: application/json
+  ...
+Data,
+  {
+    "apiVersion": "v1",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{event-origin}",
+      "kind": "Pod",
+      "name": "event-origin",
+      "namespace": "default",
+       .....
+    },
+    "kind": "Event",
+    "message": "Started container",
+    "metadata": {
+      "name": "event-origin.159d7608e3a3572c",
+      "namespace": "default",
+      ....
+    },
+    "reason": "Started",
+    ...
+  }
+```
+
+
+1. Delete the trigger:
+
+```terminal
+$ oc delete -f trigger.yaml
+```
+
+2. Delete the event source:
+
+```terminal
+$ oc delete -f k8s-events.yaml
+```
+
+3. Delete the service account, cluster role, and cluster binding:
+
+```terminal
+$ oc delete -f authentication.yaml
+```

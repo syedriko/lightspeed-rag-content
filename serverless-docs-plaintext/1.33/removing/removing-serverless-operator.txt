@@ -1,0 +1,7 @@
+# Removing the OpenShift Serverless Operator
+
+After you have removed Knative Serving and Knative Eventing, you can remove the OpenShift Serverless Operator. You can do this by using the web console or the oc CLI.
+
+* Deleting Operators from a cluster using the web console
+* Deleting Operators from a cluster using the CLI
+* Refreshing failing subscriptions

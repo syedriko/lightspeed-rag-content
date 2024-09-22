@@ -1,0 +1,28 @@
+# Knative Eventing metrics
+
+
+Cluster administrators can view the following metrics for Knative Eventing components.
+By aggregating the metrics from HTTP code, events can be separated into two categories; successful events (2xx) and failed events (5xx).
+
+# Broker ingress metrics
+
+You can use the following metrics to debug the broker ingress, see how it is performing, and see which events are being dispatched by the ingress component.
+
+
+
+# Broker filter metrics
+
+You can use the following metrics to debug broker filters, see how they are performing, and see which events are being dispatched by the filters. You can also measure the latency of the filtering action on an event.
+
+
+
+# InMemoryChannel dispatcher metrics
+
+You can use the following metrics to debug InMemoryChannel channels, see how they are performing, and see which events are being dispatched by the channels.
+
+
+
+# Event source metrics
+
+You can use the following metrics to verify that events have been delivered from the event source to the connected event sink.
+

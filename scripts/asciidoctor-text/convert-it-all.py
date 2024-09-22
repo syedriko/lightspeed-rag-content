@@ -3,6 +3,7 @@
 """Utility script to convert OCP docs from adoc to plain text."""
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -12,6 +13,7 @@ import yaml
 
 def node_in_distro(node: dict, distro: str) -> bool:
     """Check if a node is in a distro."""
+    print("Processing node: " + json.dumps(node))
     return node.get("Distros", "") == "" or distro in node.get("Distros", "").split(",")
 
 

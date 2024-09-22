@@ -1,0 +1,770 @@
+# Deploying workflows
+
+
+You can deploy the Serverless Logic workflows on the cluster in two modes: Dev mode and Preview mode.
+
+# Deploying workflows in Dev mode
+
+You can deploy your local workflow on OpenShift Container Platform in Dev mode. You can use this deployment to experiment and modify your workflow directly on the cluster, seeing changes almost immediately. Dev mode is designed for development and testing purposes. It is ideal for initial development stages and for testing new changes.
+
+* You have OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Create the workflow configuration YAML file.
+Example workflow-dev.yaml file
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+metadata:
+  name: greeting 1
+  annotations:
+    sonataflow.org/description: Greeting example on k8s!
+    sonataflow.org/version: 0.0.1
+    sonataflow.org/profile: dev 2
+spec:
+  flow:
+    start: ChooseOnLanguage
+    functions:
+      - name: greetFunction
+        type: custom
+        operation: sysout
+    states:
+      - name: ChooseOnLanguage
+        type: switch
+        dataConditions:
+          - condition: "${ .language == \"English\" }"
+            transition: GreetInEnglish
+          - condition: "${ .language == \"Spanish\" }"
+            transition: GreetInSpanish
+        defaultCondition: GreetInEnglish
+      - name: GreetInEnglish
+        type: inject
+        data:
+          greeting: "Hello from JSON Workflow, "
+        transition: GreetPerson
+      - name: GreetInSpanish
+        type: inject
+        data:
+          greeting: "Saludos desde JSON Workflow, "
+        transition: GreetPerson
+      - name: GreetPerson
+        type: operation
+        actions:
+          - name: greetAction
+            functionRef:
+              refName: greetFunction
+              arguments:
+                message:  ".greeting + .name"
+        end: true
+```
+
+is a workflow_name
+indicates that you must deploy the workflow in Dev mode
+2. To deploy the application, apply the YAML file by entering the following command:
+
+```terminal
+$ oc apply -f <filename> -n <your_namespace>
+```
+
+3. Verify the deployment and check the status of the deployed workflow by entering the following command:
+
+```terminal
+$ oc get workflow -n <your_namespace> -w
+```
+
+
+Ensure that your workflow is listed and the status is Running or Completed.
+4. Edit the workflow directly in the cluster by entering the following command:
+
+```terminal
+$ oc edit sonataflow <workflow_name> -n <your_namespace>
+```
+
+5. After editing, save the changes. The OpenShift Serverless Logic Operator detects the changes and updates the workflow accordingly.
+
+1. To ensure the changes are applied correctly, verify the status and logs of the workflow by entering the following commands:
+1. View the status of the workflow by running the following command:
+
+```terminal
+$ oc get sonataflows -n <your_namespace>
+```
+
+2. View the workflow logs by running the following command:
+
+```terminal
+$ oc logs <workflow_pod_name> -n <your_namespace>
+```
+
+
+1. After completing the testing, delete the resources to avoid unnecessary usage by running the following command:
+
+```terminal
+$ oc delete sonataflow <workflow_name> -n <your_namespace>
+```
+
+
+# Deploying workflows in Preview mode
+
+You can deploy your local workflow on OpenShift Container Platform in Preview mode. This allows you to experiment and modify your workflow directly on the cluster, seeing changes almost immediately. Preview mode is used for final testing and validation before deploying to production. It also ensures that workflows will run smoothly in a production-like setting.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+To deploy a workflow in Preview mode, OpenShift Serverless Logic Operator uses the build system on OpenShift Container Platform, which automatically creates the image for deploying your workflow.
+
+The following sections explain how to build and deploy your workflow on a cluster using the OpenShift Serverless Logic Operator with a SonataFlow custom resource.
+
+## Configuring workflows in Preview mode
+
+### Configuring the workflow base builder image
+
+If your scenario requires strict policies for image usage, such as security or hardening constraints, replace the default image used by the OpenShift Serverless Logic Operator to build the final workflow container image.
+
+By default, the OpenShift Serverless Logic Operator uses the image distributed in the official Red&#160;Hat Registry to build workflows. If your scenario requires strict policies for image use, such as security or hardening constraints, you can replace the default image.
+
+To change this image, you edit the SonataFlowPlatform custom resource (CR) in the namespace where you deployed your workflows.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. List the SonataFlowPlatform resources in your namespace by running the following command:
+
+```terminal
+$ oc get sonataflowplatform -n <your_namespace> 1
+```
+
+Replace <your_namespace> with the name of your namespace.
+2. Patch the SonataFlowPlatform resource with the new builder image by running the following command:
+
+```terminal
+$ oc patch sonataflowplatform <name> --patch 'spec:\n  build:\n    config:\n      baseImage: <your_new_image_full_name_with_tag>' -n <your_namespace>
+```
+
+
+1. Verify that the SonataFlowPlatform CR has been patched correctly by running the following command:
+
+```terminal
+$ oc describe sonataflowplatform <name> -n <your_namespace> 1
+```
+
+Replace <name> with the name of your SonataFlowPlatform resource and <your_namespace> with the name of your namespace.
+
+Ensure that the baseImage field under spec.build.config reflects the new image.
+
+### Customization for the base builder Dockerfile
+
+The OpenShift Serverless Logic Operator uses the logic-operator-rhel8-builder-config config map custom resource (CR) in its openshift-serverless-logicOpenShift Serverless Logic Operator installation namespace to configure and run the workflow build process. You can change the Dockerfile entry in this config map to adjust the Dockerfile to your needs.
+
+
+[IMPORTANT]
+----
+Modifying the Dockerfile can break the build process.
+----
+
+
+[NOTE]
+----
+This example is for reference only. The actual version might be slightly different. Do not use this example for your installation.
+----
+
+
+```yaml
+apiVersion: v1
+data:
+  DEFAULT_WORKFLOW_EXTENSION: .sw.json
+  Dockerfile: |
+    FROM registry.redhat.io/openshift-serverless-1/logic-swf-builder-rhel8:1.33.0 AS builder
+
+    # Variables that can be overridden by the builder
+    # To add a Quarkus extension to your application
+    ARG QUARKUS_EXTENSIONS
+    # Args to pass to the Quarkus CLI add extension command
+    ARG QUARKUS_ADD_EXTENSION_ARGS
+    # Additional java/mvn arguments to pass to the builder
+    ARG MAVEN_ARGS_APPEND
+
+    # Copy from build context to skeleton resources project
+    COPY --chown=1001 . ./resources
+
+    RUN /home/kogito/launch/build-app.sh ./resources
+
+    #=============================
+    # Runtime Run
+    #=============================
+    FROM registry.access.redhat.com/ubi9/openjdk-17:latest
+
+    ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en'
+
+    # We make four distinct layers so if there are application changes, the library layers can be re-used
+    COPY --from=builder --chown=185 /home/kogito/serverless-workflow-project/target/quarkus-app/lib/ /deployments/lib/
+    COPY --from=builder --chown=185 /home/kogito/serverless-workflow-project/target/quarkus-app/*.jar /deployments/
+    COPY --from=builder --chown=185 /home/kogito/serverless-workflow-project/target/quarkus-app/app/ /deployments/app/
+    COPY --from=builder --chown=185 /home/kogito/serverless-workflow-project/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+    EXPOSE 8080
+    USER 185
+    ENV AB_JOLOKIA_OFF=""
+    ENV JAVA_OPTS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+    ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+kind: ConfigMap
+metadata:
+  name: sonataflow-operator-builder-config
+  namespace: sonataflow-operator-system
+```
+
+
+### Changing resource requirements
+
+You can specify resource requirements for the internal builder pods, by creating or editing a SonataFlowPlatform resource in the workflow namespace.
+
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowPlatform
+metadata:
+  name: sonataflow-platform
+spec:
+  build:
+    template:
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "250m"
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+```
+
+
+
+[NOTE]
+----
+Only one SonataFlowPlatform resource is allowed per namespace. Fetch and edit the resource that the OpenShift Serverless Logic Operator created for you instead of trying to create another resource.
+----
+
+You can fine-tune the resource requirements for a particular workflow. Each workflow instance has a SonataFlowBuild instance created with the same name as the workflow. You can edit the SonataFlowBuild custom resource (CR) and specify the parameters as follows:
+
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowBuild
+metadata:
+  name: my-workflow
+spec:
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "250m"
+    limits:
+      memory: "128Mi"
+      cpu: "500m"
+```
+
+
+These parameters apply only to new build instances.
+
+### Passing arguments to the internal builder
+
+You can customize the build process by passing build arguments to the SonataFlowBuild instance or setting default build arguments in the SonataFlowPlatform resource.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Check for the existing SonataFlowBuild instance by running the following command:
+
+```terminal
+$ oc get sonataflowbuild <name> -n <namespace> 1
+```
+
+Replace <name> with the name of your SonataFlowBuild instance and <namespace> with your namespace.
+2. Add build arguments to the SonataFlowBuild instance by running the following command:
+
+```terminal
+$ oc edit sonataflowbuild <name> -n <namespace>
+```
+
+3. Add the desired build arguments under the .spec.buildArgs field of the SonataFlowBuild instance:
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowBuild
+metadata:
+  name: <name>  1
+spec:
+  buildArgs:
+    - name: <argument_1>
+      value: <value_1>
+    - name: <argument_2>
+      value: <value_2>
+```
+
+The name of the existing SonataFlowBuild instance.
+4. Save the file and exit.
+
+A new build with the updated configuration starts.
+5. Set the default build arguments in the SonataFlowPlatform resource by running the following command:
+
+```terminal
+$ oc edit sonataflowplatform <name> -n <namespace>
+```
+
+6. Add the desired build arguments under the .spec.buildArgs field of the SonataFlowPlatform resource:
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowPlatform
+metadata:
+  name: <name> 1
+spec:
+  build:
+    template:
+      buildArgs:
+        - name: <argument_1>
+          value: <value_1>
+        - name: <argument_2>
+          value: <value_2>
+```
+
+The name of the existing SonataFlowPlatform resource.
+7. Save the file and exit.
+
+### Setting environment variables in the internal builder
+
+You can set environment variables to the SonataFlowBuild internal builder pod. These variables are valid for the build context only and are not set on the final built workflow image.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Check for existing SonataFlowBuild instance by running the following command:
+
+```terminal
+$ oc get sonataflowbuild <name> -n <namespace>
+```
+
+
+Replace <name> with the name of your SonataFlowBuild instance and <namespace> with your namespace.
+2. Edit the SonataFlowBuild instance by running the following command:
+
+```terminal
+$ oc edit sonataflowbuild <name> -n <namespace>
+```
+
+Example SonataFlowBuild instance
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowBuild
+metadata:
+  name: <name>
+spec:
+  envs:
+    - name: <env_variable_1>
+      value: <value_1>
+    - name: <env_variable_2>
+      value: <value_2>
+```
+
+3. Save the file and exit.
+
+A new with the updated configuration starts.
+
+Alternatively, you can set the enviroments in the SonataFlowPlatform, so that every new build instances will use it as a template.
+Example SonataFlowPlatform instance
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowPlatform
+metadata:
+  name: <name>
+spec:
+  build:
+    template:
+      envs:
+        - name: <env_variable_1>
+          value: <value_1>
+        - name: <env_variable_2>
+          value: <value_2>
+```
+
+
+### Changing the base builder image
+
+You can modify the default builder image used by the OpenShift Serverless Logic Operator by editing the logic-operator-rhel8-builder-config config map.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Edit the logic-operator-rhel8-builder-config config map by running the following command:
+
+```terminal
+$ oc edit cm/logic-operator-rhel8-builder-config -n openshift-serverless-logic
+```
+
+2. Modify the dockerfile entry.
+
+In your editor, locate the Dockerfile entry and change the first line to the desired image.
+Example
+
+```yaml
+data:
+  Dockerfile: |
+    FROM registry.redhat.io/openshift-serverless-1/logic-swf-builder-rhel8:1.33.0
+    # Change the image to the desired one
+```
+
+3. Save the changes.
+
+## Building and deploying your workflow
+
+You can create a SonataFlow custom resource (CR) on OpenShift Container Platform and OpenShift Serverless Logic Operator builds and deploys the workflow.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Create a workflow YAML file similar to the following:
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+metadata:
+  name: greeting
+  annotations:
+    sonataflow.org/description: Greeting example on k8s!
+    sonataflow.org/version: 0.0.1
+spec:
+  flow:
+    start: ChooseOnLanguage
+    functions:
+      - name: greetFunction
+        type: custom
+        operation: sysout
+    states:
+      - name: ChooseOnLanguage
+        type: switch
+        dataConditions:
+          - condition: "${ .language == \"English\" }"
+            transition: GreetInEnglish
+          - condition: "${ .language == \"Spanish\" }"
+            transition: GreetInSpanish
+        defaultCondition: GreetInEnglish
+      - name: GreetInEnglish
+        type: inject
+        data:
+          greeting: "Hello from JSON Workflow, "
+        transition: GreetPerson
+      - name: GreetInSpanish
+        type: inject
+        data:
+          greeting: "Saludos desde JSON Workflow, "
+        transition: GreetPerson
+      - name: GreetPerson
+        type: operation
+        actions:
+          - name: greetAction
+            functionRef:
+              refName: greetFunction
+              arguments:
+                message:  ".greeting+.name"
+        end: true
+```
+
+2. Apply the SonataFlow workflow definition to your OpenShift Container Platform namespace by running the following command:
+
+```terminal
+$ oc apply -f <workflow-name>.yaml -n <your_namespace>
+```
+
+Example command for the greetings-workflow.yaml file:
+
+```terminal
+$ oc apply -f greetings-workflow.yaml -n workflows
+```
+
+3. List all the build configurations by running the following command:
+
+```terminal
+$ oc get buildconfigs -n workflows
+```
+
+4. Get the logs of the build process by running the following command:
+
+```terminal
+$ oc logs buildconfig/<workflow-name> -n <your_namespace>
+```
+
+Example command for the greetings-workflow.yaml file:
+
+```terminal
+$ oc logs buildconfig/greeting -n workflows
+```
+
+
+1. To verify the deployment, list all the pods by running the following command:
+
+```terminal
+$ oc get pods -n <your_namespace>
+```
+
+
+Ensure that the pod corresponding to your workflow is running.
+2. Check the running pods and their logs by running the following command:
+
+```terminal
+$ oc logs pod/<pod-name> -n workflows
+```
+
+
+## Verifying workflow deployment
+
+You can verify that your OpenShift Serverless Logic workflow is running by performing a test HTTP call from the workflow pod.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Create a workflow YAML file similar to the following:
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+metadata:
+  name: greeting
+  annotations:
+    sonataflow.org/description: Greeting example on k8s!
+    sonataflow.org/version: 0.0.1
+spec:
+  flow:
+    start: ChooseOnLanguage
+    functions:
+      - name: greetFunction
+        type: custom
+        operation: sysout
+    states:
+      - name: ChooseOnLanguage
+        type: switch
+        dataConditions:
+          - condition: "${ .language == \"English\" }"
+            transition: GreetInEnglish
+          - condition: "${ .language == \"Spanish\" }"
+            transition: GreetInSpanish
+        defaultCondition: GreetInEnglish
+      - name: GreetInEnglish
+        type: inject
+        data:
+          greeting: "Hello from JSON Workflow, "
+        transition: GreetPerson
+      - name: GreetInSpanish
+        type: inject
+        data:
+          greeting: "Saludos desde JSON Workflow, "
+        transition: GreetPerson
+      - name: GreetPerson
+        type: operation
+        actions:
+          - name: greetAction
+            functionRef:
+              refName: greetFunction
+              arguments:
+                message:  ".greeting+.name"
+        end: true
+```
+
+2. Create a route for the workflow service by running the following command:
+
+```terminal
+$ oc expose svc/<workflow-service-name> -n workflows
+```
+
+
+This command creates a public URL to access the workflow service.
+3. Set an environment variable for the public URL by running the following command:
+
+```terminal
+$ WORKFLOW_SVC=$(oc get route/<workflow-service-name> -n <namespace> --template='{{.spec.host}}')
+```
+
+4. Make an HTTP call to the workflow to send a POST request to the service by running the following command:
+
+```terminal
+$ curl -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{<"your": "json_payload">}' http://$WORKFLOW_SVC/<endpoint>
+```
+
+Example output
+
+```json
+{
+  "id": "b5fbfaa3-b125-4e6c-9311-fe5a3577efdd",
+  "workflowdata": {
+    "name": "John",
+    "language": "English",
+    "greeting": "Hello from JSON Workflow, "
+  }
+}
+```
+
+
+This output shows an example of the expected response if the workflow is running.
+
+## Restarting a build
+
+To restart a build, you can add or edit the sonataflow.org/restartBuild: true annotation in the SonataFlowBuild instance. Restarting a build is necessary if there is a problem with your workflow or the initial build revision.
+
+* You have an OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to an OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Check if the SonataFlowBuild instance exists by running the following command:
+
+```terminal
+$ oc get sonataflowbuild <name> -n <namespace>
+```
+
+2. Edit the SonataFlowBuild instance by running the following command:
+
+```terminal
+$ oc edit sonataflowbuild/<name> -n <namespace>
+```
+
+
+Replace <name> with the name of your SonataFlowBuild instance and <namespace> with the namespace where your workflow is deployed.
+3. Add the sonataflow.org/restartBuild: true annotation to restart the build.
+
+```yaml
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowBuild
+metadata:
+  name: <name>
+  annotations:
+    sonataflow.org/restartBuild: true
+```
+
+
+This action triggers the OpenShift Serverless Logic Operator to start a new build of the workflow.
+4. To monitor the build process, check the build logs by running the following command:
+
+```terminal
+$ oc logs buildconfig/<name> -n <namespace>
+```
+
+
+Replace <name> with the name of your SonataFlowBuild instance and <namespace> with the namespace where your workflow is deployed.
+
+# Editing a workflow
+
+When the OpenShift Serverless Logic Operator deploys a workflow service, it creates two config maps to store runtime properties:
+
+* User properties: Defined in a ConfigMap named after the SonataFlow object with the suffix -props. For example, if your workflow name is greeting, then the ConfigMap name is greeting-props.
+* Managed properties: Defined in a ConfigMap named after the SonataFlow object with the suffix -managed-props. For example, if your workflow name is greeting, then the ConfigMap name is greeting-managed-props.
+
+
+[NOTE]
+----
+Managed properties always override any user property with the same key name and cannot be edited by the user. Any change would be overwritten by the Operator at the next reconciliation cycle.
+----
+
+* You have OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Open and edit the ConfigMap by running the following command:
+
+```terminal
+$ oc edit cm <workflow_name>-props -n <namespace>
+```
+
+
+Replace <workflow_name> with the name of your workflow and <namespace> with the namespace where your workflow is deployed.
+2. Add the properties in the application.properties section.
+Example of a workflow properties stored within a ConfigMap:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: greeting
+  name: greeting-props
+  namespace: default
+data:
+  application.properties: |
+    my.properties.key = any-value
+```
+
+
+Ensure the properties are correctly formatted to prevent the Operator from replacing your configuration with the default one.
+3. After making the necessary changes, save the file and exit the editor.
+
+# Testing a workflow
+
+To verify that your OpenShift Serverless Logic workflow is running correctly, you can perform a test HTTP call from the relevant pod.
+
+* You have OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. To create a route for the specified service in your namespace by running the following command:
+
+```terminal
+$ oc expose svc <service_name> -n <namespace>
+```
+
+2. To fetch the URL for the newly exposed service by running the following command:
+
+```terminal
+$ WORKFLOW_SVC=$(oc get route/<service_name> --template='{{.spec.host}}')
+```
+
+3. Perform a test HTTP call and send a POST request by running the following command:
+
+```terminal
+$ curl -X POST -H 'Content-Type:application/json' -H 'Accept:application/json' -d '<request_body>' http://$WORKFLOW_SVC/<endpoint>
+```
+
+4. Verify the response to ensure the workflow is functioning as expected.
+
+# Troubleshooting a workflow
+
+The OpenShift Serverless Logic Operator deploys its pod with health check probes to ensure the Workflow runs in a healthy state. If changes cause these health checks to fail, the pod will stop responding.
+
+* You have OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Check the workflow status by running the following command:
+
+```terminal
+$ oc get workflow <name> -o jsonpath={.status.conditions} | jq .
+```
+
+2. To fetch and analyze the the logs from the workflow's deployment, run the following command:
+
+```terminal
+$ oc logs deployment/<workflow_name> -f
+```
+
+
+# Deleting a workflow
+
+You can use the oc delete command to delete your OpenShift Serverless Logic workflow in your current directory.
+
+* You have OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have installed the OpenShift CLI (oc).
+
+1. Verify that you have the correct file that defines the Workflow you want to delete. For example, workflow.yaml.
+2. Run the oc delete command to remove the Workflow from your specified namespace:
+
+```terminal
+$ oc delete -f <your_file> -n <your_namespace>
+```
+
+
+Replace <your_file> with the name of your Workflow file and <your_namespace> with your namespace.

@@ -1,0 +1,153 @@
+# Creating channels
+
+
+Channels are custom resources that define a single event-forwarding and persistence layer. After events have been sent to a channel from an event source or producer, these events can be sent to multiple Knative services or other sinks by using a subscription.
+![Channel workflow overview]
+You can create channels by instantiating a supported Channel object, and configure re-delivery attempts by modifying the delivery spec in a Subscription object.
+
+# Creating a channel by using the Administrator perspective
+
+After Knative Eventing is installed on your cluster, you can create a channel by using the Administrator perspective.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have logged in to the web console and are in the Administrator perspective.
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+
+1. In the Administrator perspective of the OpenShift Container Platform web console, navigate to Serverless -> Eventing.
+2. In the Create list, select Channel. You will be directed to the Channel page.
+3. Select the type of Channel object that you want to create in the Type list.
+
+[NOTE]
+----
+Currently only InMemoryChannel channel objects are supported by default. Knative channels for Apache Kafka are available if you have installed the Knative broker implementation for Apache Kafka on OpenShift Serverless.
+----
+4. Click Create.
+
+# Creating a channel by using the Developer perspective
+
+Using the OpenShift Container Platform web console provides a streamlined and intuitive user interface to create a channel. After Knative Eventing is installed on your cluster, you can create a channel by using the web console.
+
+* You have logged in to the OpenShift Container Platform web console.
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+1. In the Developer perspective, navigate to +Add -> Channel.
+2. Select the type of Channel object that you want to create in the Type list.
+3. Click Create.
+
+* Confirm that the channel now exists by navigating to the Topology page.
+![View the channel in the Topology view]
+
+# Creating a channel by using the Knative CLI
+
+Using the Knative (kn) CLI to create channels provides a more streamlined and intuitive user interface than modifying YAML files directly. You can use the kn channel create command to create a channel.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on the cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+* Create a channel:
+
+```terminal
+$ kn channel create <channel_name> --type <channel_type>
+```
+
+
+The channel type is optional, but where specified, must be given in the format Group:Version:Kind.
+For example, you can create an InMemoryChannel object:
+
+```terminal
+$ kn channel create mychannel --type messaging.knative.dev:v1:InMemoryChannel
+```
+
+Example output
+
+```terminal
+Channel 'mychannel' created in namespace 'default'.
+```
+
+
+* To confirm that the channel now exists, list the existing channels and inspect the output:
+
+```terminal
+$ kn channel list
+```
+
+Example output
+
+```terminal
+kn channel list
+NAME        TYPE              URL                                                     AGE   READY   REASON
+mychannel   InMemoryChannel   http://mychannel-kn-channel.default.svc.cluster.local   93s   True
+```
+
+
+* Delete a channel:
+
+```terminal
+$ kn channel delete <channel_name>
+```
+
+
+# Creating a default implementation channel by using YAML
+
+Creating Knative resources by using YAML files uses a declarative API, which enables you to describe channels declaratively and in a reproducible manner. To create a serverless channel by using YAML, you must create a YAML file that defines a Channel object, then apply it by using the oc apply command.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on the cluster.
+* Install the OpenShift CLI (oc).
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+1. Create a Channel object as a YAML file:
+
+```yaml
+apiVersion: messaging.knative.dev/v1
+kind: Channel
+metadata:
+  name: example-channel
+  namespace: default
+```
+
+2. Apply the YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+
+# Creating a channel for Apache Kafka by using YAML
+
+Creating Knative resources by using YAML files uses a declarative API, which enables you to describe channels declaratively and in a reproducible manner. You can create a Knative Eventing channel that is backed by Kafka topics by creating a Kafka channel. To create a Kafka channel by using YAML, you must create a YAML file that defines a KafkaChannel object, then apply it by using the oc apply command.
+
+* The OpenShift Serverless Operator, Knative Eventing, and the KnativeKafka custom resource are installed on your OpenShift Container Platform cluster.
+* Install the OpenShift CLI (oc).
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+1. Create a KafkaChannel object as a YAML file:
+
+```yaml
+apiVersion: messaging.knative.dev/v1beta1
+kind: KafkaChannel
+metadata:
+  name: example-channel
+  namespace: default
+spec:
+  numPartitions: 3
+  replicationFactor: 1
+```
+
+
+[IMPORTANT]
+----
+Only the v1beta1 version of the API for KafkaChannel objects on OpenShift Serverless is supported. Do not use the v1alpha1 version of this API, as this version is now deprecated.
+----
+2. Apply the KafkaChannel YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+
+# Next steps
+
+* After you have created a channel, you can connect the channel to a sink so that the sink can receive events.
+* Configure event delivery parameters that are applied in cases where an event fails to be delivered to an event sink.

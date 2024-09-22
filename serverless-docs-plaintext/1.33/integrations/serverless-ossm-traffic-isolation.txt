@@ -1,0 +1,489 @@
+# Using Service Mesh to isolate network traffic with OpenShift Serverless
+
+
+
+[IMPORTANT]
+----
+Using Service Mesh to isolate network traffic with OpenShift Serverless is a Technology Preview feature only. Technology Preview features
+are not supported with Red Hat production service level agreements (SLAs) and
+might not be functionally complete. Red Hat does not recommend using them
+in production. These features provide early access to upcoming product
+features, enabling customers to test functionality and provide feedback during
+the development process.
+For more information about the support scope of Red Hat Technology Preview features, see Technology Preview Features Support Scope.
+----
+Service Mesh can be used to isolate network traffic between tenants on a shared {product-title} cluster using Service Mesh AuthorizationPolicy resources. Serverless can also leverage this, using several Service Mesh resources. A tenant is a group of one or multiple projects that can access each other over the network on a shared cluster.
+
+# Prerequisites
+
+* You have access to an {product-title} account with cluster administrator access.
+* You have set up the Service Mesh and Serverless integration.
+* You have created one or more OpenShift projects for each tenant.
+
+# High-level architecture
+
+The high-level architecture of Serverless traffic isolation provided by Service Mesh consists of AuthorizationPolicy objects in the knative-serving, knative-eventing, and the tenants' namespaces, with all the components being part of the Service Mesh. The injected Service Mesh sidecars enforce those rules to isolate network traffic between tenants.
+
+# Securing the Service Mesh
+
+Authorization policies and mTLS allow you to secure Service Mesh.
+
+1. Make sure that all {product-title} projects of your tenant are part of the same ServiceMeshMemberRoll object as members:
+
+```yaml
+apiVersion: maistra.io/v1
+kind: ServiceMeshMemberRoll
+metadata:
+ name: default
+ namespace: istio-system
+spec:
+ members:
+   - knative-serving    # static value, needs to be here, see setup page
+   - knative-eventing   # static value, needs to be here, see setup page
+   - team-alpha-1       # example OpenShift project that belongs to the team-alpha tenant
+   - team-alpha-2       # example OpenShift project that belongs th the team-alpha tenant
+   - team-bravo-1       # example OpenShift project that belongs to the team-bravo tenant
+   - team-bravo-2       # example OpenShift project that belongs th the team-bravo tenant
+```
+
+
+All projects that are part of the mesh must enforce mTLS in strict mode. This forces Istio to only accept connections with a client-certificate present and allows the Service Mesh sidecar to validate the origin using an AuthorizationPolicy object.
+2. Create the configuration with AuthorizationPolicy objects in the knative-serving and knative-eventing namespaces:
+Example knative-default-authz-policies.yaml configuration file
+
+```yaml
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-by-default
+  namespace: knative-eventing
+spec: { }
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-by-default
+  namespace: knative-serving
+spec: { }
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-mt-channel-based-broker-ingress-to-imc-dispatcher
+  namespace: knative-eventing
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "imc-dispatcher"
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-eventing" ]
+            principals: [ "cluster.local/ns/knative-eventing/sa/mt-broker-ingress" ]
+      to:
+        - operation:
+            methods: [ "POST" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-mt-channel-based-broker-ingress-to-kafka-channel
+  namespace: knative-eventing
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "kafka-channel-receiver"
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-eventing" ]
+            principals: [ "cluster.local/ns/knative-eventing/sa/mt-broker-ingress" ]
+      to:
+        - operation:
+            methods: [ "POST" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-kafka-channel-to-mt-channel-based-broker-filter
+  namespace: knative-eventing
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "broker-filter"
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-eventing" ]
+            principals: [ "cluster.local/ns/knative-eventing/sa/knative-kafka-channel-data-plane" ]
+      to:
+        - operation:
+            methods: [ "POST" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-imc-to-mt-channel-based-broker-filter
+  namespace: knative-eventing
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "broker-filter"
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-eventing" ]
+            principals: [ "cluster.local/ns/knative-eventing/sa/imc-dispatcher" ]
+      to:
+        - operation:
+            methods: [ "POST" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-probe-kafka-broker-receiver
+  namespace: knative-eventing
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "kafka-broker-receiver"
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-eventing" ]
+            principals: [ "cluster.local/ns/knative-eventing/sa/kafka-controller" ]
+      to:
+        - operation:
+            methods: [ "GET" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-probe-kafka-sink-receiver
+  namespace: knative-eventing
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "kafka-sink-receiver"
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-eventing" ]
+            principals: [ "cluster.local/ns/knative-eventing/sa/kafka-controller" ]
+      to:
+        - operation:
+            methods: [ "GET" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-probe-kafka-channel-receiver
+  namespace: knative-eventing
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "kafka-channel-receiver"
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-eventing" ]
+            principals: [ "cluster.local/ns/knative-eventing/sa/kafka-controller" ]
+      to:
+        - operation:
+            methods: [ "GET" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-traffic-to-activator
+  namespace: knative-serving
+spec:
+  selector:
+    matchLabels:
+      app: activator
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-serving", "istio-system" ]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-traffic-to-autoscaler
+  namespace: knative-serving
+spec:
+  selector:
+    matchLabels:
+      app: autoscaler
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces: [ "knative-serving" ]
+```
+
+
+These policies restrict the access rules for the network communication between Serverless system components. Specifically, they enforce the following rules:
+* Deny all traffic that is not explicitly allowed in the knative-serving and knative-eventing namespaces
+* Allow traffic from the istio-system and knative-serving namespaces to activator
+* Allow traffic from the knative-serving namespace to autoscaler
+* Allow health probes for Apache Kafka components in the knative-eventing namespace
+* Allow internal traffic for channel-based brokers in the knative-eventing namespace
+3. Apply the authorization policy configuration:
+
+```terminal
+$ oc apply -f knative-default-authz-policies.yaml
+```
+
+4. Define which OpenShift projects can communicate with each other. For this communication, every OpenShift project of a tenant requires the following:
+* One AuthorizationPolicy object limiting directly incoming traffic to the tenant's project
+* One AuthorizationPolicy object limiting incoming traffic using the activator component of Serverless that runs in the knative-serving project
+* One AuthorizationPolicy object allowing Kubernetes to call PreStopHooks on Knative Services
+
+Instead of creating these policies manually, install the helm utility and create the necessary resources for each tenant:
+Installing the helm utility
+
+```terminal
+$ helm repo add openshift-helm-charts https://charts.openshift.io/
+```
+
+Creating example configuration for team alpha
+
+```terminal
+$ helm template openshift-helm-charts/redhat-knative-istio-authz --version 1.33.0 --set "name=team-alpha" --set "namespaces={team-alpha-1,team-alpha-2}" > team-alpha.yaml
+```
+
+Creating example configuration for team bravo
+
+```terminal
+$ helm template openshift-helm-charts/redhat-knative-istio-authz --version 1.31.0 --set "name=team-bravo" --set "namespaces={team-bravo-1,team-bravo-2}" > team-bravo.yaml
+```
+
+5. Apply the authorization policy configuration:
+
+```terminal
+$ oc apply -f team-alpha.yaml team-bravo.yaml
+```
+
+
+# Verifying the configuration
+
+You can use the curl command to verify the configuration for network traffic isolation.
+
+
+[NOTE]
+----
+The following examples assume having two tenants, each having one namespace, and all part of the ServiceMeshMemberRoll object, configured with the resources in the team-alpha.yaml and team-bravo.yaml files.
+----
+
+1. Deploy Knative Services in the namespaces of both of the tenants:
+Example command for team-alpha
+
+```terminal
+$ kn service create test-webapp -n team-alpha-1 \
+    --annotation-service serving.knative.openshift.io/enablePassthrough=true \
+    --annotation-revision sidecar.istio.io/inject=true \
+    --env RESPONSE="Hello Serverless" \
+    --image docker.io/openshift/hello-openshift
+```
+
+Example command for team-bravo
+
+```terminal
+$ kn service create test-webapp -n team-bravo-1 \
+    --annotation-service serving.knative.openshift.io/enablePassthrough=true \
+    --annotation-revision sidecar.istio.io/inject=true \
+    --env RESPONSE="Hello Serverless" \
+    --image docker.io/openshift/hello-openshift
+```
+
+
+Alternatively, use the following YAML configuration:
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: test-webapp
+  namespace: team-alpha-1
+  annotations:
+    serving.knative.openshift.io/enablePassthrough: "true"
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: 'true'
+    spec:
+      containers:
+        - image: docker.io/openshift/hello-openshift
+          env:
+            - name: RESPONSE
+              value: "Hello Serverless!"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: test-webapp
+  namespace: team-bravo-1
+  annotations:
+    serving.knative.openshift.io/enablePassthrough: "true"
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: 'true'
+    spec:
+      containers:
+        - image: docker.io/openshift/hello-openshift
+          env:
+            - name: RESPONSE
+              value: "Hello Serverless!"
+```
+
+2. Deploy a curl pod for testing the connections:
+
+```terminal
+$ cat <<EOF | oc apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl
+  namespace: team-alpha-1
+  labels:
+    app: curl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl
+  template:
+    metadata:
+      labels:
+        app: curl
+      annotations:
+        sidecar.istio.io/inject: 'true'
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl
+        command:
+        - sleep
+        - "3600"
+EOF
+```
+
+3. Verify the configuration by using the curl command.
+
+Test team-alpha-1 -> team-alpha-1 through cluster local domain, which is allowed:
+Example command
+
+```terminal
+$ oc exec deployment/curl -n team-alpha-1 -it -- curl -v http://test-webapp.team-alpha-1:80
+```
+
+Example output
+
+```terminal
+HTTP/1.1 200 OK
+content-length: 18
+content-type: text/plain; charset=utf-8
+date: Wed, 26 Jul 2023 12:49:59 GMT
+server: envoy
+x-envoy-upstream-service-time: 9
+
+Hello Serverless!
+```
+
+
+Test the team-alpha-1 to team-alpha-1 connection through an external domain, which is allowed:
+Example command
+
+```terminal
+$ EXTERNAL_URL=$(oc get ksvc -n team-alpha-1 test-webapp -o custom-columns=:.status.url --no-headers) && \
+oc exec deployment/curl -n team-alpha-1 -it -- curl -ik $EXTERNAL_URL
+```
+
+Example output
+
+```terminal
+HTTP/2 200
+content-length: 18
+content-type: text/plain; charset=utf-8
+date: Wed, 26 Jul 2023 12:55:30 GMT
+server: istio-envoy
+x-envoy-upstream-service-time: 3629
+
+Hello Serverless!
+```
+
+
+Test the team-alpha-1 to team-bravo-1 connection through the cluster&#8217;s local domain, which is not allowed:
+Example command
+
+```terminal
+$ oc exec deployment/curl -n team-alpha-1 -it -- curl -v http://test-webapp.team-bravo-1:80
+```
+
+Example output
+
+```terminal
+* processing: http://test-webapp.team-bravo-1:80
+*   Trying 172.30.73.216:80...
+* Connected to test-webapp.team-bravo-1 (172.30.73.216) port 80
+> GET / HTTP/1.1
+> Host: test-webapp.team-bravo-1
+> User-Agent: curl/8.2.0
+> Accept: */*
+>
+< HTTP/1.1 403 Forbidden
+< content-length: 19
+< content-type: text/plain
+< date: Wed, 26 Jul 2023 12:55:49 GMT
+< server: envoy
+< x-envoy-upstream-service-time: 6
+<
+* Connection #0 to host test-webapp.team-bravo-1 left intact
+RBAC: access denied
+```
+
+
+Test the team-alpha-1 to team-bravo-1 connection through an external domain, which is allowed:
+Example command
+
+```terminal
+$ EXTERNAL_URL=$(oc get ksvc -n team-bravo-1 test-webapp -o custom-columns=:.status.url --no-headers) && \
+oc exec deployment/curl -n team-alpha-1 -it -- curl -ik $EXTERNAL_URL
+```
+
+Example output
+
+```terminal
+HTTP/2 200
+content-length: 18
+content-type: text/plain; charset=utf-8
+date: Wed, 26 Jul 2023 12:56:22 GMT
+server: istio-envoy
+x-envoy-upstream-service-time: 2856
+
+Hello Serverless!
+```
+
+4. Delete the resources that were created for verification:
+
+```terminal
+$ oc delete deployment/curl -n team-alpha-1 && \
+oc delete ksvc/test-webapp -n team-alpha-1 && \
+oc delete ksvc/test-webapp -n team-bravo-1
+```
+
+
+* The Helm utility
+* Option reference for the Helm utility

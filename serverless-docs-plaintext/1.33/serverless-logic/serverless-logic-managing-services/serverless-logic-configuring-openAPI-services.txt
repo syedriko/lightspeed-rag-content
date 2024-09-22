@@ -1,0 +1,267 @@
+# Configuring OpenAPI services
+
+
+The OpenAPI Specification (OAS) defines a standard, programming language-agnostic interface for HTTP APIs. You can understand a service's capabilities without access to the source code, additional documentation, or network traffic inspection. When you define a service by using the OpenAPI, you can understand and interact with it using minimal implementation logic. Just as interface descriptions simplify lower-level programming, the OpenAPI Specification eliminates guesswork in calling a service.
+
+# OpenAPI function definition
+
+OpenShift Serverless Logic allows the workflows to interact with remote services using an OpenAPI specfication reference in a function.
+
+
+```json
+{
+   "functions": [
+      {
+         "name": "myFunction1",
+         "operation": "classpath:/myopenapi-file.yaml#myFunction1"
+      }
+   ]
+}
+```
+
+
+The operation attribute is a string composed of the following parameters:
+
+* URI: The engine uses this to locate the specification file, such as classpath.
+* Operation identifier: You can find this identifier in the OpenAPI specification file.
+
+OpenShift Serverless Logic supports the following URI schemes:
+
+* classpath: Use this for files located in the src/main/resources folder of the application project. classpath is the default URI scheme. If you do not define a URI scheme, the file location is src/main/resources/myopenapifile.yaml.
+* file: Use this for files located in the file system.
+* http or https: Use these for remotely located files.
+
+Ensure the OpenAPI specification files are available during build time. OpenShift Serverless Logic uses an internal code generation feature to send requests at runtime. After you build the application image, OpenShift Serverless Logic will not have access to these files.
+
+If the OpenAPI service you want to add to the workflow does not have a specification file, you can either create one or update the service to generate and expose the file.
+
+# Sending REST requests based on the OpenAPI specification
+
+To send REST requests that are based on the OpenAPI specification files, you must perform the following procedures:
+
+* Define the function references
+* Access the defined functions in the workflow states
+
+* You have OpenShift Serverless Logic Operator installed on your cluster.
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have access to the OpenAPI specification files.
+
+1. To define the OpenAPI functions:
+1. Identify and access the OpenAPI specification files for the services you intend to invoke.
+2. Copy the OpenAPI specification files into your workflow service directory, such as src/main/resources/specs.
+
+The following example shows the OpenAPI specification for the multiplication REST service:
+Example multiplication REST service OpenAPI specification
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Generated API
+  version: "1.0"
+paths:
+  /:
+    post:
+      operationId: doOperation
+      parameters:
+        - in: header
+          name: notUsed
+          schema:
+            type: string
+          required: false
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultiplicationOperation'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    format: float
+                    type: number
+components:
+  schemas:
+    MultiplicationOperation:
+      type: object
+      properties:
+        leftElement:
+          format: float
+          type: number
+        rightElement:
+          format: float
+          type: number
+```
+
+3. To define functions in the workflow, use the operationId from the OpenAPI specification to reference the desired operations in your function definitions.
+Example function definitions in the temperature conversion application
+
+```json
+{
+   "functions": [
+     {
+       "name": "multiplication",
+       "operation": "specs/multiplication.yaml#doOperation"
+     },
+     {
+       "name": "subtraction",
+       "operation": "specs/subtraction.yaml#doOperation"
+     }
+   ]
+}
+```
+
+4. Ensure that your function definitions reference the correct paths to the OpenAPI files stored in the src/main/resources/specs directory.
+2. To access the defined functions in the workflow states:
+1. Define workflow actions to call the function definitions you added. Ensure each action references a function defined earlier.
+2. Use the functionRef attribute to refer to the specific function by its name. Map the arguments in the functionRef using the parameters defined in the OpenAPI specification.
+
+The following example shows about mapping parameters in the request path instead of request body, you can refer to the following PetStore API example:
+Example for mapping function arguments in workflow
+
+```json
+{
+   "states": [
+    {
+      "name": "SetConstants",
+      "type": "inject",
+      "data": {
+        "subtractValue": 32.0,
+        "multiplyValue": 0.5556
+      },
+      "transition": "Computation"
+    },
+    {
+      "name": "Computation",
+      "actionMode": "sequential",
+      "type": "operation",
+      "actions": [
+        {
+          "name": "subtract",
+          "functionRef": {
+            "refName": "subtraction",
+            "arguments": {
+              "leftElement": ".fahrenheit",
+              "rightElement": ".subtractValue"
+            }
+          }
+        },
+        {
+          "name": "multiply",
+          "functionRef": {
+            "refName": "multiplication",
+            "arguments": {
+               "leftElement": ".difference",
+               "rightElement": ".multiplyValue"
+            }
+          }
+        }
+      ],
+      "end": {
+        "terminate": true
+      }
+    }
+  ]
+}
+```
+
+3. Check the Operation Object section of the OpenAPI specification to understand how to structure parameters in the request.
+4. Use jq expressions to extract data from the payload and map it to the required parameters. Ensure the engine maps parameter names according to the OpenAPI specification.
+5. For operations requiring parameters in the request path instead of the body, refer to the parameter definitions in the OpenAPI specification.
+
+For more information about mapping parameters in the request path instead of request body, you can refer to the following PetStore API example:
+Example for mapping path parameters
+
+```json
+{
+  "/pet/{petId}": {
+    "get": {
+      "tags": ["pet"],
+      "summary": "Find pet by ID",
+      "description": "Returns a single pet",
+      "operationId": "getPetById",
+      "parameters": [
+        {
+          "name": "petId",
+          "in": "path",
+          "description": "ID of pet to return",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+
+Following is an example invocation of a function, in which only one parameter named petId is added in the request path:
+Example of calling the PetStore function
+
+```json
+{
+  "name": "CallPetStore", 1
+  "actionMode": "sequential",
+  "type": "operation",
+  "actions": [
+    {
+      "name": "getPet",
+      "functionRef": {
+        "refName": "getPetById", 2
+        "arguments": { 3
+          "petId": ".petId"
+        }
+      }
+    }
+  ]
+}
+```
+
+State definition, such as CallPetStore.
+Function definition reference. In the previous example, the function definition getPetById is for PetStore OpenAPI specification.
+Arguments definition. OpenShift Serverless Logic adds the argument petId to the request path before sending a request.
+
+# Configuring the endpoint URL of OpenAPI services
+
+After accessing the function definitions in workflow states, you can configure the endpoint URL of OpenAPI services.
+
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have created your OpenShift Serverless Logic project.
+* You have access to the OpenAPI specification files.
+* You have defined the function definitions in the workflow.
+* You have the access to the defined functions in the workflow states.
+
+1. Locate the OpenAPI specification file you want to configure. For example, substraction.yaml.
+2. Convert the file name into a valid configuration key by replacing special characters, such as ., with underscores and converting letters to lowercase. For example, change substraction.yaml to substraction_yaml.
+3. To define the configuration key, use the converted file name as the REST client configuration key. Set this key as an environment variable, as shown in the following example:
+
+```sh
+quarkus.rest-client.subtraction_yaml.url=http://myserver.com
+```
+
+4. To prevent hardcoding URLs in the application.properties file, use environment variable substitution, as shown in the following example:
+
+```sh
+quarkus.rest-client.subtraction_yaml.url=${SUBTRACTION_URL:http://myserver.com}
+```
+
+
+In this example:
+* Configuration Key: quarkus.rest-client.subtraction_yaml.url
+* Environment variable: SUBTRACTION_URL
+* Fallback URL: http://myserver.com
+5. Ensure that the (SUBTRACTION_URL) environment variable is set in your system or deployment environment. If the variable is not found, the application uses the fallback URL (http://myserver.com).
+6. Add the configuration key and URL substitution to the application.properties file:
+
+```sh
+quarkus.rest-client.subtraction_yaml.url=${SUBTRACTION_URL:http://myserver.com}
+```
+
+7. Deploy or restart your application to apply the new configuration settings.

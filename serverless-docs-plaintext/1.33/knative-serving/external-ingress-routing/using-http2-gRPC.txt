@@ -1,0 +1,51 @@
+# Using HTTP2 and gRPC
+
+OpenShift Serverless supports only insecure or edge-terminated routes. Insecure or edge-terminated routes do not support HTTP2 on OpenShift Container Platform. These routes also do not support gRPC because gRPC is transported by HTTP2. If you use these protocols in your application, you must call the application using the ingress gateway directly. To do this you must find the ingress gateway's public address and the application's specific host.
+
+# Interacting with a serverless application using HTTP2 and gRPC
+
+
+[IMPORTANT]
+----
+This method applies to OpenShift Container Platform 4.10 and later. For older versions, see the following section.
+----
+
+* Install OpenShift Serverless Operator and Knative Serving on your cluster.
+* Install the OpenShift CLI (oc).
+* Create a Knative service.
+* Upgrade OpenShift Container Platform 4.10 or later.
+* Enable HTTP/2 on OpenShift Ingress controller.
+
+1. Add the serverless.openshift.io/default-enable-http2=true annotation to the KnativeServing Custom Resource:
+
+```terminal
+$ oc annotate knativeserving <your_knative_CR> -n knative-serving serverless.openshift.io/default-enable-http2=true
+```
+
+2. After the annotation is added, you can verify that the appProtocol value of the Kourier service is h2c:
+
+```terminal
+$ oc get svc -n knative-serving-ingress kourier -o jsonpath="{.spec.ports[0].appProtocol}"
+```
+
+Example output
+
+```terminal
+h2c
+```
+
+3. Now you can use the gRPC framework over the HTTP/2 protocol for external traffic, for example:
+
+```golang
+import "google.golang.org/grpc"
+
+grpc.Dial(
+   YOUR_URL, 1
+   grpc.WithTransportCredentials(insecure.NewCredentials())), 2
+)
+```
+
+Your ksvc URL.
+Your certificate.
+
+* Enabling HTTP/2 Ingress connectivity

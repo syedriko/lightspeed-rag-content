@@ -1,0 +1,4 @@
+# Webhook metrics
+
+Webhook metrics report useful information about operations. For example, if a large number of operations fail, this might indicate an issue with a user-created resource.
+

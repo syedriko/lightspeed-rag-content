@@ -1,0 +1,67 @@
+# Creating triggers
+
+
+Brokers can be used in combination with triggers to deliver events from an event source to an event sink. Events are sent from an event source to a broker as an HTTP POST request. After events have entered the broker, they can be filtered by CloudEvent attributes using triggers, and sent as an HTTP POST request to an event sink.
+![Broker event delivery overview]
+
+# Creating a trigger by using the Administrator perspective
+
+Using the OpenShift Container Platform web console provides a streamlined and intuitive user interface to create a trigger. After Knative Eventing is installed on your cluster and you have created a broker, you can create a trigger by using the web console.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have logged in to the web console and are in the Administrator perspective.
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have created a Knative broker.
+* You have created a Knative service to use as a subscriber.
+
+1. In the Administrator perspective of the OpenShift Container Platform web console, navigate to Serverless -> Eventing.
+2. In the Broker tab, select the Options menu Options menu for the broker that you want to add a trigger to.
+3. Click Add Trigger in the list.
+4. In the Add Trigger dialogue box, select a Subscriber for the trigger. The subscriber is the Knative service that will receive events from the broker.
+5. Click Add.
+
+# Creating a trigger by using the Developer perspective
+
+Using the OpenShift Container Platform web console provides a streamlined and intuitive user interface to create a trigger. After Knative Eventing is installed on your cluster and you have created a broker, you can create a trigger by using the web console.
+
+* The OpenShift Serverless Operator, Knative Serving, and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have logged in to the web console.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have created a broker and a Knative service or other event sink to connect to the trigger.
+
+1. In the Developer perspective, navigate to the Topology page.
+2. Hover over the broker that you want to create a trigger for, and drag the arrow. The Add Trigger option is displayed.
+3. Click Add Trigger.
+4. Select your sink in the Subscriber list.
+5. Click Add.
+
+* After the subscription has been created, you can view it in the Topology page, where it is represented as a line that connects the broker to the event sink.
+
+1. In the Developer perspective, navigate to the Topology page.
+2. Click on the trigger that you want to delete.
+3. In the Actions context menu, select Delete Trigger.
+
+# Creating a trigger by using the Knative CLI
+
+You can use the kn trigger create command to create a trigger.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+* Create a trigger:
+
+```terminal
+$ kn trigger create <trigger_name> --broker <broker_name> --filter <key=value> --sink <sink_name>
+```
+
+
+Alternatively, you can create a trigger and simultaneously create the default broker using broker injection:
+
+```terminal
+$ kn trigger create <trigger_name> --inject-broker --filter <key=value> --sink <sink_name>
+```
+
+
+By default, triggers forward all events sent to a broker to sinks that are subscribed to that broker.
+Using the --filter attribute for triggers allows you to filter events from a broker, so that subscribers will only receive a subset of events based on your defined criteria.

@@ -1,0 +1,56 @@
+# High availability for Knative deployments
+
+High availability (HA) is available by default for the Knative Serving activator, autoscaler, autoscaler-hpa, controller, webhook, domain-mapping, domainmapping-webhook, kourier-control, and kourier-gateway components, which are configured to have two replicas each. You can change the number of replicas for these components by modifying the spec.high-availability.replicas value in the KnativeServing custom resource (CR).
+
+# Configuring high availability replicas for Knative Serving
+
+To specify three minimum replicas for the eligible deployment resources, set the value of the field spec.high-availability.replicas in the custom resource to 3.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* The OpenShift Serverless Operator and Knative Serving are installed on your cluster.
+
+1. In the OpenShift Container Platform web console Administrator perspective, navigate to OperatorHub -> Installed Operators.
+2. Select the knative-serving namespace.
+3. Click Knative Serving in the list of Provided APIs for the OpenShift Serverless Operator to go to the Knative Serving tab.
+4. Click knative-serving, then go to the YAML tab in the knative-serving page.
+![Knative Serving YAML]
+5. Modify the number of replicas in the KnativeServing CR:
+Example YAML
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec:
+  high-availability:
+    replicas: 3
+```
+
+
+# Overriding disruption budgets
+
+A Pod Disruption Budget (PDB) is a standard feature of Kubernetes APIs that helps limit the disruption to an application when its pods need to be rescheduled for maintenance reasons.
+
+* Override the default PDB for a specific resource by modifying the minAvailable configuration value in the KnativeServing custom resource (CR).
+
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+ name: knative-serving
+ namespace: knative-serving
+spec:
+ podDisruptionBudgets:
+ - name: activator-pdb
+   minAvailable: 70%
+```
+
+
+
+[NOTE]
+----
+If you disable high-availability, for example, by changing the high-availability.replicas value to 1, make sure you also update the corresponding PDB minAvailable value to 0. Otherwise, the pod disruption budget prevents automatic cluster or Operator updates.
+----

@@ -1,0 +1,546 @@
+# Developing Node.js functions
+
+
+After you have created a Node.js function project, you can modify the template files provided to add business logic to your function. This includes configuring function invocation and the returned headers and status codes.
+
+# Prerequisites
+
+* Before you can develop functions, you must complete the steps in Configuring OpenShift Serverless Functions.
+
+# Node.js function template structure
+
+When you create a Node.js function using the Knative (kn) CLI, the project directory looks like a typical Node.js project. The only exception is the additional func.yaml file, which is used to configure the function.
+
+Both http and event trigger functions have the same template structure:
+
+
+```terminal
+.
+├── func.yaml 1
+├── index.js 2
+├── package.json 3
+├── README.md
+└── test 4
+    ├── integration.js
+    └── unit.js
+```
+
+
+The func.yaml configuration file is used to determine the image name and registry.
+Your project must contain an index.js file which exports a single function.
+You are not restricted to the dependencies provided in the template package.json file. You can add additional dependencies as you would in any other Node.js project.
+Example of adding npm dependencies
+
+```terminal
+npm install --save opossum
+```
+
+
+When the project is built for deployment, these dependencies are included in the created runtime container image.
+Integration and unit test scripts are provided as part of the function template.
+
+# About invoking Node.js functions
+
+When using the Knative (kn) CLI to create a function project, you can generate a project that responds to CloudEvents, or one that responds to simple HTTP requests. CloudEvents in Knative are transported over HTTP as a POST request, so both function types listen for and respond to incoming HTTP events.
+
+Node.js functions can be invoked with a simple HTTP request. When an incoming request is received, functions are invoked with a context object as the first parameter.
+
+## Node.js context objects
+
+Functions are invoked by providing a context object as the first parameter. This object provides access to the incoming HTTP request information.
+
+This information includes the HTTP request method, any query strings or headers sent with the request, the HTTP version, and the request body. Incoming requests that contain a CloudEvent attach the incoming instance of the CloudEvent to the context object so that it can be accessed by using context.cloudevent.
+
+### Context object methods
+
+The context object has a single method, cloudEventResponse(), that accepts a data value and returns a CloudEvent.
+
+In a Knative system, if a function deployed as a service is invoked by an event broker sending a CloudEvent, the broker examines the response. If the response is a CloudEvent, this event is handled by the broker.
+
+
+```javascript
+// Expects to receive a CloudEvent with customer data
+function handle(context, customer) {
+  // process the customer
+  const processed = handle(customer);
+  return context.cloudEventResponse(customer)
+    .source('/handle')
+    .type('fn.process.customer')
+    .response();
+}
+```
+
+
+### CloudEvent data
+
+If the incoming request is a CloudEvent, any data associated with the CloudEvent is extracted from the event and provided as a second parameter. For example, if a CloudEvent is received that contains a JSON string in its data property that is similar to the following:
+
+
+```json
+{
+  "customerId": "0123456",
+  "productId": "6543210"
+}
+```
+
+
+When invoked, the second parameter to the function, after the context object, will be a JavaScript object that has customerId and productId properties.
+
+
+```javascript
+function handle(context, data)
+```
+
+
+The data parameter in this example is a JavaScript object that contains the customerId and productId properties.
+
+### Arbitrary data
+
+A function can receive any data, not just CloudEvents. For example, you might want to call a function by using POST with an arbitrary object in the body:
+
+
+```json
+{
+  "id": "12345",
+  "contact": {
+    "title": "Mr.",
+    "firstname": "John",
+    "lastname": "Smith"
+  }
+}
+```
+
+
+In this case, you can define the function as follows:
+
+
+```javascript
+function handle(context, customer) {
+  return "Hello " + customer.contact.title + " " + customer.contact.lastname;
+}
+```
+
+
+Supplying the contact object to the function would then return the following output:
+
+
+```text
+Hello Mr. Smith
+```
+
+
+### Supported data types
+
+CloudEvents can contain various data types, including JSON, XML, plain text, and binary data. These data types are provided to the function in their respective formats:
+
+* JSON Data: Provided as a JavaScript object.
+* XML Data: Provided as an XML document.
+* Plain Text: Provided as a string.
+* Binary Data: Provided as a Buffer object.
+
+### Multiple data types in a function
+
+Ensure your function can handle different data types by checking the Content-Type header and parsing the data accordingly. For example:
+
+
+```javascript
+function handle(context, data) {
+  if (context.headers['content-type'] === 'application/json') {
+    // handle JSON data
+  } else if (context.headers['content-type'] === 'application/xml') {
+    // handle XML data
+  } else {
+    // handle other data types
+  }
+}
+```
+
+
+# Node.js function return values
+
+Functions can return any valid JavaScript type or can have no return value. When a function has no return value specified, and no failure is indicated, the caller receives a 204 No Content response.
+
+Functions can also return a CloudEvent or a Message object in order to push events into the Knative Eventing system. In this case, the developer is not required to understand or implement the CloudEvent messaging specification. Headers and other relevant information from the returned values are extracted and sent with the response.
+
+
+```javascript
+function handle(context, customer) {
+  // process customer and return a new CloudEvent
+  return new CloudEvent({
+    source: 'customer.processor',
+    type: 'customer.processed'
+  })
+}
+```
+
+
+## Returning primitive types
+
+Functions can return any valid JavaScript type, including primitives such as strings, numbers, and booleans:
+
+
+```javascript
+function handle(context) {
+  return "This function Works!"
+}
+```
+
+
+Calling this function returns the following string:
+
+
+```terminal
+$ curl https://myfunction.example.com
+```
+
+
+
+```terminal
+This function Works!
+```
+
+
+
+```javascript
+function handle(context) {
+  let somenumber = 100
+  return { body: somenumber }
+}
+```
+
+
+Calling this function returns the following number:
+
+
+```terminal
+$ curl https://myfunction.example.com
+```
+
+
+
+```terminal
+100
+```
+
+
+
+```javascript
+function handle(context) {
+  let someboolean = false
+  return { body: someboolean }
+}
+```
+
+
+Calling this function returns the following boolean:
+
+
+```terminal
+$ curl https://myfunction.example.com
+```
+
+
+
+```terminal
+false
+```
+
+
+Returning primitives directly without wrapping them in an object results in a 204 No Content status code with an empty body:
+
+
+```javascript
+function handle(context) {
+  let someboolean = false
+  return someboolean
+}
+```
+
+
+Calling this function returns the following:
+
+
+```terminal
+$ http :8080
+```
+
+
+
+```terminal
+HTTP/1.1 204 No Content
+Connection: keep-alive
+...
+```
+
+
+## Returning headers
+
+You can set a response header by adding a headers property to the return object. These headers are extracted and sent with the response to the caller.
+
+
+```javascript
+function handle(context, customer) {
+  // process customer and return custom headers
+  // the response will be '204 No content'
+  return { headers: { customerid: customer.id } };
+}
+```
+
+
+## Returning status codes
+
+You can set a status code that is returned to the caller by adding a statusCode property to the return object:
+
+
+```javascript
+function handle(context, customer) {
+  // process customer
+  if (customer.restricted) {
+    return { statusCode: 451 }
+  }
+}
+```
+
+
+Status codes can also be set for errors that are created and thrown by the function:
+
+
+```javascript
+function handle(context, customer) {
+  // process customer
+  if (customer.restricted) {
+    const err = new Error(‘Unavailable for legal reasons’);
+    err.statusCode = 451;
+    throw err;
+  }
+}
+```
+
+
+# Testing Node.js functions
+
+Node.js functions can be tested locally on your computer. In the default project that is created when you create a function by using kn func create, there is a test folder that contains some simple unit and integration tests.
+
+* The OpenShift Serverless Operator and Knative Serving are installed on the cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a function by using kn func create.
+
+1. Navigate to the test folder for your function.
+2. Run the tests:
+
+```terminal
+$ npm test
+```
+
+
+# Overriding liveness and readiness probe values
+
+You can override liveness and readiness probe values for your Node.js functions. This allows you to configure health checks performed on the function.
+
+* The OpenShift Serverless Operator and Knative Serving are installed on the cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a function by using kn func create.
+
+1. In your function code, create the Function object, which implements the following interface:
+
+```javascript
+export interface Function {
+  init?: () => any; 1
+
+  shutdown?: () => any; 2
+
+  liveness?: HealthCheck; 3
+
+  readiness?: HealthCheck; 4
+
+  logLevel?: LogLevel;
+
+  handle: CloudEventFunction | HTTPFunction; 5
+}
+```
+
+The initialization function, called before the server is started. This function is optional and should be synchronous.
+The shutdown function, called after the server is stopped. This function is optional and should be synchronous.
+The liveness function, called to check if the server is alive. This function is optional and should return 200/OK if the server is alive.
+The readiness function, called to check if the server is ready to accept requests. This function is optional and should return 200/OK if the server is ready.
+The function to handle HTTP requests.
+
+For example, add the following code to the index.js file:
+
+```javascript
+const Function = {
+
+  handle: (context, body) => {
+    // The function logic goes here
+    return 'function called'
+  },
+
+  liveness: () => {
+    process.stdout.write('In liveness\n');
+    return 'ok, alive';
+  }, 1
+
+  readiness: () => {
+    process.stdout.write('In readiness\n');
+    return 'ok, ready';
+  } 2
+};
+
+Function.liveness.path = '/alive'; 3
+Function.readiness.path = '/ready'; 4
+
+module.exports = Function;
+```
+
+Custom liveness function.
+Custom readiness function.
+Custom liveness endpoint.
+Custom readiness endpoint.
+
+As an alternative to Function.liveness.path and Function.readiness.path, you can specify custom endpoints using the LIVENESS_URL and READINESS_URL environment variables:
+
+```yaml
+run:
+  envs:
+  - name: LIVENESS_URL
+    value: /alive 1
+  - name: READINESS_URL
+    value: /ready 2
+```
+
+The liveness path, set to /alive here.
+The readiness path, set to /ready here.
+2. Add the new endpoints to the func.yaml file, so that they are properly bound to the container for the Knative service:
+
+```yaml
+deploy:
+  healthEndpoints:
+    liveness: /alive
+    readiness: /ready
+```
+
+
+# Node.js context object reference
+
+The context object has several properties that can be accessed by the function developer. Accessing these properties can provide information about HTTP requests and write output to the cluster logs.
+
+## log
+
+Provides a logging object that can be used to write output to the cluster logs. The log adheres to the Pino logging API.
+
+
+```javascript
+function handle(context) {
+  context.log.info(“Processing customer”);
+}
+```
+
+
+You can access the function by using the kn func invoke command:
+
+
+```terminal
+$ kn func invoke --target 'http://example.function.com'
+```
+
+
+
+```terminal
+{"level":30,"time":1604511655265,"pid":3430203,"hostname":"localhost.localdomain","reqId":1,"msg":"Processing customer"}
+```
+
+
+You can change the log level to one of fatal, error, warn, info, debug, trace, or silent. To do that, change the value of logLevel by assigning one of these values to the environment variable FUNC_LOG_LEVEL using the config command.
+
+## query
+
+Returns the query string for the request, if any, as key-value pairs. These attributes are also found on the context object itself.
+
+
+```javascript
+function handle(context) {
+  // Log the 'name' query parameter
+  context.log.info(context.query.name);
+  // Query parameters are also attached to the context
+  context.log.info(context.name);
+}
+```
+
+
+You can access the function by using the kn func invoke command:
+
+
+```terminal
+$ kn func invoke --target 'http://example.com?name=tiger'
+```
+
+
+
+```terminal
+{"level":30,"time":1604511655265,"pid":3430203,"hostname":"localhost.localdomain","reqId":1,"msg":"tiger"}
+```
+
+
+## body
+
+Returns the request body if any. If the request body contains JSON code, this will be parsed so that the attributes are directly available.
+
+
+```javascript
+function handle(context) {
+  // log the incoming request body's 'hello' parameter
+  context.log.info(context.body.hello);
+}
+```
+
+
+You can access the function by using the curl command to invoke it:
+
+
+```terminal
+$ kn func invoke -d '{"Hello": "world"}'
+```
+
+
+
+```terminal
+{"level":30,"time":1604511655265,"pid":3430203,"hostname":"localhost.localdomain","reqId":1,"msg":"world"}
+```
+
+
+## headers
+
+Returns the HTTP request headers as an object.
+
+
+```javascript
+function handle(context) {
+  context.log.info(context.headers["custom-header"]);
+}
+```
+
+
+You can access the function by using the kn func invoke command:
+
+
+```terminal
+$ kn func invoke --target 'http://example.function.com'
+```
+
+
+
+```terminal
+{"level":30,"time":1604511655265,"pid":3430203,"hostname":"localhost.localdomain","reqId":1,"msg":"some-value"}
+```
+
+
+## HTTP requests
+
+method:: Returns the HTTP request method as a string.
+httpVersion:: Returns the HTTP version as a string.
+httpVersionMajor:: Returns the HTTP major version number as a string.
+httpVersionMinor:: Returns the HTTP minor version number as a string.
+
+# Next steps
+
+* Build and deploy a function.

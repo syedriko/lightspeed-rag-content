@@ -1,0 +1,109 @@
+# Cluster local availability
+
+
+By default, Knative services are published to a public IP address.
+Being published to a public IP address means that Knative services are public applications, and have a publicly accessible URL.
+Publicly accessible URLs are accessible from outside of the cluster.
+However, developers may need to build back-end services that are only be accessible from inside the cluster, known as private services.
+Developers can label individual services in the cluster with the networking.knative.dev/visibility=cluster-local label to make them private.
+
+[IMPORTANT]
+----
+For OpenShift Serverless 1.15.0 and newer versions, the serving.knative.dev/visibility label is no longer available. You must update existing services to use the networking.knative.dev/visibility label instead.
+----
+
+# Setting cluster availability to cluster local
+
+* The OpenShift Serverless Operator and Knative Serving are installed on the cluster.
+* You have created a Knative service.
+
+* Set the visibility for your service by adding the networking.knative.dev/visibility=cluster-local label:
+
+```terminal
+$ oc label ksvc <service_name> networking.knative.dev/visibility=cluster-local
+```
+
+
+* Check that the URL for your service is now in the format \http://<service_name>.<namespace>.svc.cluster.local, by entering the following command and reviewing the output:
+
+```termina
+$ oc get ksvc
+```
+
+Example output
+
+```terminal
+NAME            URL                                                                         LATESTCREATED     LATESTREADY       READY   REASON
+hello           http://hello.default.svc.cluster.local                                      hello-tx2g7       hello-tx2g7       True
+```
+
+
+# Enabling TLS authentication for cluster local services
+
+For cluster local services, the Kourier local gateway kourier-internal is used. If you want to use TLS traffic against the Kourier local gateway, you must configure your own server certificates in the local gateway.
+
+* You have installed the OpenShift Serverless Operator and Knative Serving.
+* You have administrator permissions.
+* You have installed the OpenShift (oc) CLI.
+
+1. Deploy server certificates in the knative-serving-ingress namespace:
+
+```terminal
+$ export san="knative"
+```
+
+
+[NOTE]
+----
+Subject Alternative Name (SAN) validation is required so that these certificates can serve the request to <app_name>.<namespace>.svc.cluster.local.
+----
+2. Generate a root key and certificate:
+
+```terminal
+$ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 \
+    -subj '/O=Example/CN=Example' \
+    -keyout ca.key \
+    -out ca.crt
+```
+
+3. Generate a server key that uses SAN validation:
+
+```terminal
+$ openssl req -out tls.csr -newkey rsa:2048 -nodes -keyout tls.key \
+  -subj "/CN=Example/O=Example" \
+  -addext "subjectAltName = DNS:$san"
+```
+
+4. Create server certificates:
+
+```terminal
+$ openssl x509 -req -extfile <(printf "subjectAltName=DNS:$san") \
+  -days 365 -in tls.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out tls.crt
+```
+
+5. Configure a secret for the Kourier local gateway:
+1. Deploy a secret in knative-serving-ingress namespace from the certificates created by the previous steps:
+
+```terminal
+$ oc create -n knative-serving-ingress secret tls server-certs \
+    --key=tls.key \
+    --cert=tls.crt --dry-run=client -o yaml | oc apply -f -
+```
+
+2. Update the KnativeServing custom resource (CR) spec to use the secret that was created by the Kourier gateway:
+Example KnativeServing CR
+
+```yaml
+...
+spec:
+  config:
+    kourier:
+      cluster-cert-secret: server-certs
+...
+```
+
+
+The Kourier controller sets the certificate without restarting the service, so that you do not need to restart the pod.
+
+You can access the Kourier internal service with TLS through port 443 by mounting and using the ca.crt from the client.

@@ -1,0 +1,20 @@
+# Uninstalling OpenShift Serverless Knative Serving
+
+Before you can remove the OpenShift Serverless Operator, you must remove Knative Serving. To uninstall Knative Serving, you must remove the KnativeServing custom resource (CR) and delete the knative-serving namespace.
+
+# Uninstalling Knative Serving
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on OpenShift Dedicated.
+* Install the OpenShift CLI (oc).
+
+1. Delete the KnativeServing CR:
+
+```terminal
+$ oc delete knativeservings.operator.knative.dev knative-serving -n knative-serving
+```
+
+2. After the command has completed and all pods have been removed from the knative-serving namespace, delete the namespace:
+
+```terminal
+$ oc delete namespace knative-serving
+```

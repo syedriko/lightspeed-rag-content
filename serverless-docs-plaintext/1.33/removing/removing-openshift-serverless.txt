@@ -1,0 +1,12 @@
+# Removing OpenShift Serverless overview
+
+If you need to remove OpenShift Serverless from your cluster, you can do so by manually removing the OpenShift Serverless Operator and other OpenShift Serverless components. Before you can remove the OpenShift Serverless Operator, you must remove Knative Serving and Knative Eventing.
+
+After uninstalling the OpenShift Serverless, you can remove the Operator and API custom resource definitions (CRDs) that remain on the cluster.
+
+The steps for fully removing OpenShift Serverless are detailed in the following procedures:
+
+* Uninstalling Knative Eventing.
+* Uninstalling Knative Serving.
+* Removing the OpenShift Serverless Operator.
+* Deleting OpenShift Serverless custom resource definitions.

@@ -1,0 +1,400 @@
+# Creating serverless applications
+
+
+Serverless applications are created and deployed as Kubernetes services, defined by a route and a configuration, and contained in a YAML file. To deploy a serverless application using OpenShift Serverless, you must create a Knative Service object.
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: showcase 1
+  namespace: default 2
+spec:
+  template:
+    spec:
+      containers:
+        - image: quay.io/openshift-knative/showcase 3
+          env:
+            - name: GREET 4
+              value: Ciao
+```
+
+The name of the application.
+The namespace the application uses.
+The image of the application.
+The environment variable printed out by the sample application.
+You can create a serverless application by using one of the following methods:
+* Create a Knative service from the OpenShift Container Platform web console.
+
+For OpenShift Container Platform, see Creating applications using the Developer perspective for more information.
+* Create a Knative service by using the Knative (kn) CLI.
+* Create and apply a Knative Service object as a YAML file, by using the oc CLI.
+
+# Creating serverless applications by using the Knative CLI
+
+Using the Knative (kn) CLI to create serverless applications provides a more streamlined and intuitive user interface over modifying YAML files directly. You can use the kn service create command to create a basic serverless application.
+
+* OpenShift Serverless Operator and Knative Serving are installed on your cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+* Create a Knative service:
+
+```terminal
+$ kn service create <service-name> --image <image> --tag <tag-value>
+```
+
+
+Where:
+* --image is the URI of the image for the application.
+* --tag is an optional flag that can be used to add a tag to the initial revision that is created with the service.
+Example command
+
+```terminal
+$ kn service create showcase \
+    --image quay.io/openshift-knative/showcase
+```
+
+Example output
+
+```terminal
+Creating service 'showcase' in namespace 'default':
+
+  0.271s The Route is still working to reflect the latest desired specification.
+  0.580s Configuration "showcase" is waiting for a Revision to become ready.
+  3.857s ...
+  3.861s Ingress has not yet been reconciled.
+  4.270s Ready to serve.
+
+Service 'showcase' created with latest revision 'showcase-00001' and URL:
+http://showcase-default.apps-crc.testing
+```
+
+
+# Creating serverless applications using YAML
+
+Creating Knative resources by using YAML files uses a declarative API, which enables you to describe applications declaratively and in a reproducible manner. To create a serverless application by using YAML, you must create a YAML file that defines a Knative Service object, then apply it by using oc apply.
+
+After the service is created and the application is deployed, Knative creates an immutable revision for this version of the application. Knative also performs network programming to create a route, ingress, service, and load balancer for your application and automatically scales your pods up and down based on traffic.
+
+* OpenShift Serverless Operator and Knative Serving are installed on your cluster.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* Install the OpenShift CLI (oc).
+
+1. Create a YAML file containing the following sample code:
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: showcase
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - image: quay.io/openshift-knative/showcase
+          env:
+            - name: GREET
+              value: Bonjour
+```
+
+2. Navigate to the directory where the YAML file is contained, and deploy the application by applying the YAML file:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+
+If you do not want to switch to the Developer perspective in the OpenShift Container Platform web console or use the Knative (kn) CLI or YAML files, you can create Knative components by using the Administator perspective of the OpenShift Container Platform web console.
+
+# Creating serverless applications using the Administrator perspective
+
+Serverless applications are created and deployed as Kubernetes services, defined by a route and a configuration, and contained in a YAML file. To deploy a serverless application using OpenShift Serverless, you must create a Knative Service object.
+
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: showcase 1
+  namespace: default 2
+spec:
+  template:
+    spec:
+      containers:
+        - image: quay.io/openshift-knative/showcase 3
+          env:
+            - name: GREET 4
+              value: Ciao
+```
+
+
+The name of the application.
+The namespace the application uses.
+The image of the application.
+The environment variable printed out by the sample application.
+
+After the service is created and the application is deployed, Knative creates an immutable revision for this version of the application. Knative also performs network programming to create a route, ingress, service, and load balancer for your application and automatically scales your pods up and down based on traffic.
+
+To create serverless applications using the Administrator perspective, ensure that you have completed the following steps.
+
+* The OpenShift Serverless Operator and Knative Serving are installed.
+* You have logged in to the web console and are in the Administrator perspective.
+
+1. Navigate to the Serverless -> Serving page.
+2. In the Create list, select Service.
+3. Manually enter YAML or JSON definitions, or by dragging and dropping a file into the editor.
+4. Click Create.
+
+# Creating a service using offline mode
+
+You can execute kn service commands in offline mode, so that no changes happen on the cluster, and instead the service descriptor file is created on your local machine. After the descriptor file is created, you can modify the file before propagating changes to the cluster.
+
+
+[IMPORTANT]
+----
+{FeatureName} is a Technology Preview feature only. Technology Preview features
+are not supported with Red Hat production service level agreements (SLAs) and
+might not be functionally complete. Red Hat does not recommend using them
+in production. These features provide early access to upcoming product
+features, enabling customers to test functionality and provide feedback during
+the development process.
+For more information about the support scope of Red Hat Technology Preview features, see Technology Preview Features Support Scope.
+----
+
+* OpenShift Serverless Operator and Knative Serving are installed on your cluster.
+* You have installed the Knative (kn) CLI.
+
+1. In offline mode, create a local Knative service descriptor file:
+
+```terminal
+$ kn service create showcase \
+    --image quay.io/openshift-knative/showcase \
+    --target ./ \
+    --namespace test
+```
+
+Example output
+
+```terminal
+Service 'showcase' created in namespace 'test'.
+```
+
+* The --target ./ flag enables offline mode and specifies ./ as the directory for storing the new directory tree.
+
+If you do not specify an existing directory, but use a filename, such as --target my-service.yaml, then no directory tree is created. Instead, only the service descriptor file my-service.yaml is created in the current directory.
+
+The filename can have the .yaml, .yml, or .json extension. Choosing .json creates the service descriptor file in the JSON format.
+* The --namespace test option places the new service in the test namespace.
+
+If you do not use --namespace, and you are logged in to an OpenShift Container Platform cluster, the descriptor file is created in the current namespace. Otherwise, the descriptor file is created in the default namespace.
+2. Examine the created directory structure:
+
+```terminal
+$ tree ./
+```
+
+Example output
+
+```terminal
+./
+└── test
+    └── ksvc
+        └── showcase.yaml
+
+2 directories, 1 file
+```
+
+* The current ./ directory specified with --target contains the new test/ directory that is named after the specified namespace.
+* The test/ directory contains the ksvc directory, named after the resource type.
+* The ksvc directory contains the descriptor file showcase.yaml, named according to the specified service name.
+3. Examine the generated service descriptor file:
+
+```terminal
+$ cat test/ksvc/showcase.yaml
+```
+
+Example output
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: showcase
+  namespace: test
+spec:
+  template:
+    metadata:
+      annotations:
+        client.knative.dev/user-image: quay.io/openshift-knative/showcase
+      creationTimestamp: null
+    spec:
+      containers:
+      - image: quay.io/openshift-knative/showcase
+        name: ""
+        resources: {}
+status: {}
+```
+
+4. List information about the new service:
+
+```terminal
+$ kn service describe showcase --target ./ --namespace test
+```
+
+Example output
+
+```terminal
+Name:       showcase
+Namespace:  test
+Age:
+URL:
+
+Revisions:
+
+Conditions:
+  OK TYPE    AGE REASON
+```
+
+* The --target ./ option specifies the root directory for the directory structure containing namespace subdirectories.
+
+Alternatively, you can directly specify a YAML or JSON filename with the --target option. The accepted file extensions are .yaml, .yml, and .json.
+* The --namespace option specifies the namespace, which communicates to kn the subdirectory that contains the necessary service descriptor file.
+
+If you do not use --namespace, and you are logged in to an OpenShift Container Platform cluster, kn searches for the service in the subdirectory that is named after the current namespace. Otherwise, kn searches in the default/ subdirectory.
+5. Use the service descriptor file to create the service on the cluster:
+
+```terminal
+$ kn service create -f test/ksvc/showcase.yaml
+```
+
+Example output
+
+```terminal
+Creating service 'showcase' in namespace 'test':
+
+  0.058s The Route is still working to reflect the latest desired specification.
+  0.098s ...
+  0.168s Configuration "showcase" is waiting for a Revision to become ready.
+ 23.377s ...
+ 23.419s Ingress has not yet been reconciled.
+ 23.534s Waiting for load balancer to be ready
+ 23.723s Ready to serve.
+
+Service 'showcase' created to latest revision 'showcase-00001' is available at URL:
+http://showcase-test.apps.example.com
+```
+
+
+# Verifying your serverless application deployment
+
+To verify that your serverless application has been deployed successfully, you must get the application URL created by Knative, and then send a request to that URL and observe the output. OpenShift Serverless supports the use of both HTTP and HTTPS URLs, however the output from oc get ksvc always prints URLs using the http:// format.
+
+* OpenShift Serverless Operator and Knative Serving are installed on your cluster.
+* You have installed the oc CLI.
+* You have created a Knative service.
+
+* Install the OpenShift CLI (oc).
+
+1. Find the application URL:
+
+```terminal
+$ oc get ksvc <service_name>
+```
+
+Example output
+
+```terminal
+NAME       URL                                   LATESTCREATED    LATESTREADY      READY   REASON
+showcase   http://showcase-default.example.com   showcase-00001   showcase-00001   True
+```
+
+2. Make a request to your cluster and observe the output.
+Example HTTP request (using HTTPie tool)
+
+```terminal
+$ http showcase-default.example.com
+```
+
+Example HTTPS request
+
+```terminal
+$ https showcase-default.example.com
+```
+
+Example output
+
+```terminal
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Quarkus/2.13.7.Final-redhat-00003 Java/17.0.7
+X-Config: {"sink":"http://localhost:31111","greet":"Ciao","delay":0}
+X-Version: v0.7.0-4-g23d460f
+content-length: 49
+
+{
+    "artifact": "knative-showcase",
+    "greeting": "Ciao"
+}
+```
+
+3. Optional. If you don't have the HTTPie tool installed on your system, you can likely use curl tool instead:
+Example HTTPS request
+
+```terminal
+$ curl http://showcase-default.example.com
+```
+
+Example output
+
+```terminal
+{"artifact":"knative-showcase","greeting":"Ciao"}
+```
+
+4. Optional. If you receive an error relating to a self-signed certificate in the certificate chain, you can add the --verify=no flag to the HTTPie command to ignore the error:
+
+```terminal
+$ https --verify=no showcase-default.example.com
+```
+
+Example output
+
+```terminal
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: Quarkus/2.13.7.Final-redhat-00003 Java/17.0.7
+X-Config: {"sink":"http://localhost:31111","greet":"Ciao","delay":0}
+X-Version: v0.7.0-4-g23d460f
+content-length: 49
+
+{
+    "artifact": "knative-showcase",
+    "greeting": "Ciao"
+}
+```
+
+
+[IMPORTANT]
+----
+Self-signed certificates must not be used in a production deployment. This method is only for testing purposes.
+----
+5. Optional. If your OpenShift Container Platform cluster is configured with a certificate that is signed by a certificate authority (CA) but not yet globally configured for your system, you can specify this with the curl command.
+The path to the certificate can be passed to the curl command by using the --cacert flag:
+
+```terminal
+$ curl https://showcase-default.example.com --cacert <file>
+```
+
+Example output
+
+```terminal
+{"artifact":"knative-showcase","greeting":"Ciao"}
+```
+
+
+# Additional resources
+
+* Knative Serving CLI commands
+* Configuring JSON Web Token authentication for Knative services

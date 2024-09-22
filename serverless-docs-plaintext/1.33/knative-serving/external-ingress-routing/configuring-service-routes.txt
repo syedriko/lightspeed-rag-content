@@ -1,0 +1,116 @@
+# Configuring routes for Knative services
+
+If you want to configure a Knative service to use your TLS certificate on OpenShift Container Platform, you must disable the automatic creation of a route for the service by the OpenShift Serverless Operator and instead manually create a route for the service.
+
+[NOTE]
+----
+When you complete the following procedure, the default OpenShift Container Platform route in the knative-serving-ingress namespace is not created. However, the Knative route for the application is still created in this namespace.
+----
+
+# Configuring OpenShift Container Platform routes for Knative services
+
+* The OpenShift Serverless Operator and Knative Serving component must be installed on your OpenShift Container Platform cluster.
+* Install the OpenShift CLI (oc).
+
+1. Create a Knative service that includes the serving.knative.openshift.io/disableRoute=true annotation:
+
+[IMPORTANT]
+----
+The serving.knative.openshift.io/disableRoute=true annotation instructs OpenShift Serverless to not automatically create a route for you. However, the service still shows a URL and reaches a status of Ready. This URL does not work externally until you create your own route with the same hostname as the hostname in the URL.
+----
+1. Create a Knative Service resource:
+Example resource
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: <service_name>
+  annotations:
+    serving.knative.openshift.io/disableRoute: "true"
+spec:
+  template:
+    spec:
+      containers:
+      - image: <image>
+...
+```
+
+2. Apply the Service resource:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+3. Optional. Create a Knative service by using the kn service create command:
+Example kn command
+
+```terminal
+$ kn service create <service_name> \
+  --image=gcr.io/knative-samples/helloworld-go \
+  --annotation serving.knative.openshift.io/disableRoute=true
+```
+
+2. Verify that no OpenShift Container Platform route has been created for the service:
+Example command
+
+```terminal
+$ $ oc get routes.route.openshift.io \
+  -l serving.knative.openshift.io/ingressName=$KSERVICE_NAME \
+  -l serving.knative.openshift.io/ingressNamespace=$KSERVICE_NAMESPACE \
+  -n knative-serving-ingress
+```
+
+
+You will see the following output:
+
+```terminal
+No resources found in knative-serving-ingress namespace.
+```
+
+3. Create a Route resource in the knative-serving-ingress namespace:
+
+```yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    haproxy.router.openshift.io/timeout: 600s 1
+  name: <route_name> 2
+  namespace: knative-serving-ingress 3
+spec:
+  host: <service_host> 4
+  port:
+    targetPort: http2
+  to:
+    kind: Service
+    name: kourier
+    weight: 100
+  tls:
+    insecureEdgeTerminationPolicy: Allow
+    termination: edge 5
+    key: |-
+      -----BEGIN PRIVATE KEY-----
+      [...]
+      -----END PRIVATE KEY-----
+    certificate: |-
+      -----BEGIN CERTIFICATE-----
+      [...]
+      -----END CERTIFICATE-----
+    caCertificate: |-
+      -----BEGIN CERTIFICATE-----
+      [...]
+      -----END CERTIFICATE----
+  wildcardPolicy: None
+```
+
+The timeout value for the OpenShift Container Platform route. You must set the same value as the max-revision-timeout-seconds setting (600s by default).
+The name of the OpenShift Container Platform route.
+The namespace for the OpenShift Container Platform route. This must be knative-serving-ingress.
+The hostname for external access. You can set this to <service_name>-<service_namespace>.<domain>.
+The certificates you want to use. Currently, only edge termination is supported.
+4. Apply the Route resource:
+
+```terminal
+$ oc apply -f <filename>
+```

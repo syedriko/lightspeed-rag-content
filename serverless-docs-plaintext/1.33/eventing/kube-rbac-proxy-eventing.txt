@@ -1,0 +1,72 @@
+# Configuring kube-rbac-proxy for Eventing
+
+
+The kube-rbac-proxy component provides internal authentication and authorization capabilities for Knative Eventing.
+
+# Configuring kube-rbac-proxy resources for Eventing
+
+You can globally override resource allocation for the kube-rbac-proxy container by using the OpenShift Serverless Operator CR.
+
+
+[NOTE]
+----
+You can also override resource allocation for a specific deployment.
+----
+
+The following configuration sets Knative Eventing kube-rbac-proxy minimum and maximum CPU and memory allocation:
+
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+spec:
+  config:
+    deployment:
+      "kube-rbac-proxy-cpu-request": "10m" 1
+      "kube-rbac-proxy-memory-request": "20Mi" 2
+      "kube-rbac-proxy-cpu-limit": "100m" 3
+      "kube-rbac-proxy-memory-limit": "100Mi" 4
+```
+
+
+Sets minimum CPU allocation.
+Sets minimum RAM allocation.
+Sets maximum CPU allocation.
+Sets maximum RAM allocation.
+
+# Configuring kube-rbac-proxy resources for Knative for Apache Kafka
+
+You can globally override resource allocation for the kube-rbac-proxy container by using the OpenShift Serverless Operator CR.
+
+
+[NOTE]
+----
+You can also override resource allocation for a specific deployment.
+----
+
+The following configuration sets Knative Kafka kube-rbac-proxy minimum and maximum CPU and memory allocation:
+
+
+```yaml
+apiVersion: operator.serverless.openshift.io/v1alpha1
+kind: KnativeKafka
+metadata:
+  name: knative-kafka
+  namespace: knative-kafka
+spec:
+  config:
+    deployment:
+      "kube-rbac-proxy-cpu-request": "10m" 1
+      "kube-rbac-proxy-memory-request": "20Mi" 2
+      "kube-rbac-proxy-cpu-limit": "100m" 3
+      "kube-rbac-proxy-memory-limit": "100Mi" 4
+```
+
+
+Sets minimum CPU allocation.
+Sets minimum RAM allocation.
+Sets maximum CPU allocation.
+Sets maximum RAM allocation.

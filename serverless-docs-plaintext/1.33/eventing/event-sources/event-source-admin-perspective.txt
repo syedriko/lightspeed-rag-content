@@ -1,0 +1,15 @@
+# Event source in the Administrator perspective
+
+Sourcing events is critical to developing a distributed system that reacts to events.
+
+# Creating an event source by using the Administrator perspective
+
+A Knative event source can be any Kubernetes object that generates or imports cloud events, and relays those events to another endpoint, known as a sink.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have logged in to the web console and are in the Administrator perspective.
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+
+1. In the Administrator perspective of the OpenShift Container Platform web console, navigate to Serverless -> Eventing.
+2. In the Create list, select Event Source. You will be directed to the Event Sources page.
+3. Select the event source type that you want to create.

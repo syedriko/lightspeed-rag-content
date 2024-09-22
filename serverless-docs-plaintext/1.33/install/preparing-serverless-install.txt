@@ -1,0 +1,61 @@
+# Preparing to install OpenShift Serverless
+
+
+Read the following information about supported configurations and prerequisites before you install OpenShift Serverless.
+For OpenShift Container Platform:
+* OpenShift Serverless is supported for installation in a restricted network environment.
+* OpenShift Serverless is supported for disconnected installation, except for OpenShift Serverless Functions.
+* OpenShift Serverless currently cannot be used in a multi-tenant configuration on a single cluster.
+
+# Supported configurations
+
+The set of supported features, configurations, and integrations for OpenShift Serverless, current and past versions, are available at the Supported Configurations page.
+
+# Scalability and performance on OpenShift Container Platform
+
+OpenShift Serverless has been tested with a configuration of 3 main nodes and 3 worker nodes, each of which has 64 CPUs, 457 GB of memory, and 394 GB of storage each.
+
+The maximum number of Knative services that can be created using this configuration is 3,000. This corresponds to the OpenShift Container Platform Kubernetes services limit of 10,000, since 1 Knative service creates 3 Kubernetes services.
+
+The average scale from zero response time was approximately 3.4 seconds, with a maximum response time of 8 seconds, and a 99.9th percentile of 4.5 seconds for a simple Quarkus application. These times might vary depending on the application and the runtime of the application.
+
+
+[NOTE]
+----
+The following section on defining cluster size requirements applies to these distributions:
+* OpenShift Container Platform
+* OpenShift Dedicated
+* Red Hat OpenShift Service on AWS
+----
+
+# Defining cluster size requirements
+
+To install and use OpenShift Serverless, the cluster must be sized correctly.
+
+
+[NOTE]
+----
+The following requirements relate only to the pool of worker machines of the cluster. Control plane nodes are not used for general scheduling and are omitted from the requirements.
+----
+
+The minimum requirement to use OpenShift Serverless is a cluster with 10 CPUs and 40GB memory.
+By default, each pod requests ~400m of CPU, so the minimum requirements are based on this value.
+
+The total size requirements to run OpenShift Serverless are dependent on the components that are installed and the applications that are deployed, and might vary depending on your deployment.
+
+# Scaling your cluster using compute machine sets on OpenShift Container Platform
+
+You can use the OpenShift Container Platform MachineSet API to manually scale your cluster up to the desired size. The minimum requirements usually mean that you must scale up one of the default compute machine sets by two additional machines. See Manually scaling a compute machine set.
+
+## Additional requirements for advanced use-cases
+
+For more advanced use-cases such as logging or metering on OpenShift Container Platform, you must deploy more resources. Recommended requirements for such use-cases are 24 CPUs and 96GB of memory.
+
+If you have high availability (HA) enabled on your cluster, this requires between 0.5 - 1.5 cores and between 200MB - 2GB of memory for each replica of the Knative Serving control plane.
+HA is enabled for some Knative Serving components by default. You can disable HA by following the documentation on "Configuring high availability replicas".
+
+# Additional resources in OpenShift Container Platform documentation
+
+* Using Operator Lifecycle Manager on restricted networks
+* Understanding OperatorHub
+* Cluster capabilities

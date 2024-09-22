@@ -1,0 +1,44 @@
+# Listing event sources from the command line
+
+Using the Knative (kn) CLI provides a streamlined and intuitive user interface to view existing event sources on your cluster.
+
+# Listing available event sources by using the Knative CLI
+
+You can list existing event sources by using the kn source list command.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on the cluster.
+* You have installed the Knative (kn) CLI.
+
+1. List the existing event sources in the terminal:
+
+```terminal
+$ kn source list
+```
+
+Example output
+
+```terminal
+NAME   TYPE              RESOURCE                               SINK         READY
+a1     ApiServerSource   apiserversources.sources.knative.dev   ksvc:eshow2   True
+b1     SinkBinding       sinkbindings.sources.knative.dev       ksvc:eshow3   False
+p1     PingSource        pingsources.sources.knative.dev        ksvc:eshow1   True
+```
+
+2. Optional: You can list event sources of a specific type only, by using the --type flag:
+
+```terminal
+$ kn source list --type <event_source_type>
+```
+
+Example command
+
+```terminal
+$ kn source list --type PingSource
+```
+
+Example output
+
+```terminal
+NAME   TYPE              RESOURCE                               SINK         READY
+p1     PingSource        pingsources.sources.knative.dev        ksvc:eshow1   True
+```

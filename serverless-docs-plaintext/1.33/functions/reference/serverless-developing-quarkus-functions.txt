@@ -1,0 +1,348 @@
+# Developing Quarkus functions
+
+
+After you have created a Quarkus function project, you can modify the template files provided to add business logic to your function. This includes configuring function invocation and the returned headers and status codes.
+
+# Prerequisites
+
+* Before you can develop functions, you must complete the setup steps in Configuring OpenShift Serverless Functions.
+
+# Quarkus function template structure
+
+When you create a Quarkus function by using the Knative (kn) CLI, the project directory looks similar to a typical Maven project. Additionally, the project contains the func.yaml file, which is used for configuring the function.
+
+Both http and event trigger functions have the same template structure:
+
+
+```terminal
+.
+├── func.yaml 1
+├── mvnw
+├── mvnw.cmd
+├── pom.xml 2
+├── README.md
+└── src
+    ├── main
+    │   ├── java
+    │   │   └── functions
+    │   │       ├── Function.java 3
+    │   │       ├── Input.java
+    │   │       └── Output.java
+    │   └── resources
+    │       └── application.properties
+    └── test
+        └── java
+            └── functions 4
+                ├── FunctionTest.java
+                └── NativeFunctionIT.java
+```
+
+
+Used to determine the image name and registry.
+The Project Object Model (POM) file contains project configuration, such as information about dependencies. You can add additional dependencies by modifying this file.
+Example of additional dependencies
+
+```xml
+...
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.8.0</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+...
+```
+
+
+Dependencies are downloaded during the first compilation.
+The function project must contain a Java method annotated with @Funq. You can place this method in the Function.java class.
+Contains simple test cases that can be used to test your function locally.
+
+# About invoking Quarkus functions
+
+You can create a Quarkus project that responds to cloud events, or one that responds to simple HTTP requests. Cloud events in Knative are transported over HTTP as a POST request, so either function type can listen and respond to incoming HTTP requests.
+
+When an incoming request is received, Quarkus functions are invoked with an instance of a permitted type.
+
+
+
+The following example shows a function that receives and processes the customerId and productId purchase data that is listed in the previous table:
+
+
+```java
+public class Functions {
+    @Funq
+    public void processPurchase(Purchase purchase) {
+        // process the purchase
+    }
+}
+```
+
+
+The corresponding Purchase JavaBean class that contains the purchase data looks as follows:
+
+
+```java
+public class Purchase {
+    private long customerId;
+    private long productId;
+    // getters and setters
+}
+```
+
+
+## Invocation examples
+
+The following example code defines three functions named withBeans, withCloudEvent, and withBinary;
+
+
+```java
+import io.quarkus.funqy.Funq;
+import io.quarkus.funqy.knative.events.CloudEvent;
+
+public class Input {
+    private String message;
+
+    // getters and setters
+}
+
+public class Output {
+    private String message;
+
+    // getters and setters
+}
+
+public class Functions {
+    @Funq
+    public Output withBeans(Input in) {
+        // function body
+    }
+
+    @Funq
+    public CloudEvent<Output> withCloudEvent(CloudEvent<Input> in) {
+        // function body
+    }
+
+    @Funq
+    public void withBinary(byte[] in) {
+        // function body
+    }
+}
+```
+
+
+The withBeans function of the Functions class can be invoked by:
+
+* An HTTP POST request with a JSON body:
+
+```terminal
+$ curl "http://localhost:8080/withBeans" -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"message": "Hello there."}'
+```
+
+* An HTTP GET request with query parameters:
+
+```terminal
+$ curl "http://localhost:8080/withBeans?message=Hello%20there." -X GET
+```
+
+* A CloudEvent object in binary encoding:
+
+```terminal
+$ curl "http://localhost:8080/" -X POST \
+  -H "Content-Type: application/json" \
+  -H "Ce-SpecVersion: 1.0" \
+  -H "Ce-Type: withBeans" \
+  -H "Ce-Source: cURL" \
+  -H "Ce-Id: 42" \
+  -d '{"message": "Hello there."}'
+```
+
+* A CloudEvent object in structured encoding:
+
+```terminal
+$ curl http://localhost:8080/ \
+    -H "Content-Type: application/cloudevents+json" \
+    -d '{ "data": {"message":"Hello there."},
+          "datacontenttype": "application/json",
+          "id": "42",
+          "source": "curl",
+          "type": "withBeans",
+          "specversion": "1.0"}'
+```
+
+
+The withCloudEvent function of the Functions class can be invoked by using a CloudEvent object, similarly to the withBeans function. However, unlike withBeans, withCloudEvent cannot be invoked with a plain HTTP request.
+
+The withBinary function of the Functions class can be invoked by:
+
+* A CloudEvent object in binary encoding:
+
+```
+$ curl "http://localhost:8080/" -X POST \
+  -H "Content-Type: application/octet-stream" \
+  -H "Ce-SpecVersion: 1.0"\
+  -H "Ce-Type: withBinary" \
+  -H "Ce-Source: cURL" \
+  -H "Ce-Id: 42" \
+  --data-binary '@img.jpg'
+```
+
+* A CloudEvent object in structured encoding:
+
+```
+$ curl http://localhost:8080/ \
+  -H "Content-Type: application/cloudevents+json" \
+  -d "{ \"data_base64\": \"$(base64 --wrap=0 img.jpg)\",
+        \"datacontenttype\": \"application/octet-stream\",
+        \"id\": \"42\",
+        \"source\": \"curl\",
+        \"type\": \"withBinary\",
+        \"specversion\": \"1.0\"}"
+```
+
+
+# CloudEvent attributes
+
+If you need to read or write the attributes of a CloudEvent, such as type or subject, you can use the CloudEvent<T> generic interface and the CloudEventBuilder builder. The <T> type parameter must be one of the permitted types.
+
+In the following example, CloudEventBuilder is used to return success or failure of processing the purchase:
+
+
+```java
+public class Functions {
+
+    private boolean _processPurchase(Purchase purchase) {
+        // do stuff
+    }
+
+    public CloudEvent<Void> processPurchase(CloudEvent<Purchase> purchaseEvent) {
+        System.out.println("subject is: " + purchaseEvent.subject());
+
+        if (!_processPurchase(purchaseEvent.data())) {
+            return CloudEventBuilder.create()
+                    .type("purchase.error")
+                    .build();
+        }
+        return CloudEventBuilder.create()
+                .type("purchase.success")
+                .build();
+    }
+}
+```
+
+
+# Quarkus function return values
+
+Functions can return an instance of any type from the list of permitted types. Alternatively, they can return the Uni<T> type, where the <T> type parameter can be of any type from the permitted types.
+
+The Uni<T> type is useful if a function calls asynchronous APIs, because the returned object is serialized in the same format as the received object. For example:
+
+* If a function receives an HTTP request, then the returned object is sent in the body of an HTTP response.
+* If a function receives a CloudEvent object in binary encoding, then the returned object is sent in the data property of a binary-encoded CloudEvent object.
+
+The following example shows a function that fetches a list of purchases:
+
+
+```java
+public class Functions {
+    @Funq
+    public List<Purchase> getPurchasesByName(String name) {
+      // logic to retrieve purchases
+    }
+}
+```
+
+
+* Invoking this function through an HTTP request produces an HTTP response that contains a list of purchases in the body of the response.
+* Invoking this function through an incoming CloudEvent object produces a CloudEvent response with a list of purchases in the data property.
+
+## Permitted types
+
+The input and output of a function can be any of the void, String, or byte[] types. Additionally, they can be primitive types and their wrappers, for example, int and Integer. They can also be the following complex objects: Javabeans, maps, lists, arrays, and the special CloudEvents<T> type.
+
+Maps, lists, arrays, the <T> type parameter of the CloudEvents<T> type, and attributes of Javabeans can only be of types listed here.
+
+
+```java
+public class Functions {
+    public List<Integer> getIds();
+    public Purchase[] getPurchasesByName(String name);
+    public String getNameById(int id);
+    public Map<String,Integer> getNameIdMapping();
+    public void processImage(byte[] img);
+}
+```
+
+
+# Testing Quarkus functions
+
+Quarkus functions can be tested locally on your computer. In the default project that is created when you create a function using kn func create, there is the  src/test/ directory, which contains basic Maven tests. These tests can be extended as needed.
+
+* You have created a Quarkus function.
+* You have installed the Knative (kn) CLI.
+
+1. Navigate to the project folder for your function.
+2. Run the Maven tests:
+
+```terminal
+$ ./mvnw test
+```
+
+
+# Overriding liveness and readiness probe values
+
+You can override liveness and readiness probe values for your Quarkus functions. This allows you to configure health checks performed on the function.
+
+* The OpenShift Serverless Operator and Knative Serving are installed on the cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a function by using kn func create.
+
+1. Override the /health/liveness and /health/readiness paths with your own values. You can do this either by changing properties in the function source or by setting the QUARKUS_SMALLRYE_HEALTH_LIVENESS_PATH and QUARKUS_SMALLRYE_HEALTH_READINESS_PATH environment variables on func.yaml file.
+1. To override the paths using the function source, update the path properties in the src/main/resources/application.properties file:
+
+```
+quarkus.smallrye-health.root-path=/health 1
+quarkus.smallrye-health.liveness-path=alive 2
+quarkus.smallrye-health.readiness-path=ready 3
+```
+
+The root path, which is automatically prepended to the liveness and readiness paths.
+The liveness path, set to /health/alive here.
+The readiness path, set to /health/ready here.
+2. To override the paths using environment variables, define the path variables in the build block of the func.yaml file:
+
+```yaml
+build:
+  builder: s2i
+  buildEnvs:
+  - name: QUARKUS_SMALLRYE_HEALTH_LIVENESS_PATH
+    value: alive 1
+  - name: QUARKUS_SMALLRYE_HEALTH_READINESS_PATH
+    value: ready 2
+```
+
+The liveness path, set to /health/alive here.
+The readiness path, set to /health/ready here.
+2. Add the new endpoints to the func.yaml file, so that they are properly bound to the container for the Knative service:
+
+```yaml
+deploy:
+  healthEndpoints:
+    liveness: /health/alive
+    readiness: /health/ready
+```
+
+
+# Next steps
+
+* Build and deploy a function.

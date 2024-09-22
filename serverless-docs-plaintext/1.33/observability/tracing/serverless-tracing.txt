@@ -1,0 +1,27 @@
+# Tracing requests
+
+
+Distributed tracing records the path of a request through the various services that make up an application. It is used to tie information about different units of work together, to understand a whole chain of events in a distributed transaction. The units of work might be executed in different processes or hosts.
+
+# Distributed tracing overview
+
+As a service owner, you can use distributed tracing to instrument your services to gather insights into your service architecture.
+You can use distributed tracing for monitoring, network profiling, and troubleshooting the interaction between components in modern, cloud-native, microservices-based applications.
+
+With distributed tracing you can perform the following functions:
+
+* Monitor distributed transactions
+* Optimize performance and latency
+* Perform root cause analysis
+
+Red Hat OpenShift distributed tracing consists of two main components:
+
+* Red Hat OpenShift distributed tracing platform - This component is based on the open source Jaeger project.
+* Red Hat OpenShift distributed tracing data collection - This component is based on the open source OpenTelemetry project.
+
+Both of these components are based on the vendor-neutral OpenTracing APIs and instrumentation.
+
+# Additional resources for OpenShift Container Platform
+
+* Red Hat OpenShift distributed tracing architecture
+* Installing distributed tracing

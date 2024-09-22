@@ -1,0 +1,141 @@
+# Using Serving with OpenShift ingress sharding
+
+
+You can use Knative Serving with OpenShift ingress sharding to split ingress traffic based on domains. This allows you to manage and route network traffic to different parts of a cluster more efficiently.
+
+[NOTE]
+----
+Even with OpenShift ingress sharding in place, OpenShift Serverless traffic is still routed through a single Knative Ingress Gateway and the activator component in the knative-serving project.
+For more information about isolating the network traffic, see Using Service Mesh to isolate network traffic with OpenShift Serverless.
+----
+* You have installed the OpenShift Serverless Operator and Knative Serving.
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+
+# Configuring OpenShift ingress shards
+
+Before configuring Knative Serving, you must configure OpenShift ingress shards.
+
+* Use a label selector in the IngressController CR to configure OpenShift Serverless to match specific ingress shards with different domains:
+Example IngressController CR
+
+```yaml
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: ingress-dev 1
+  namespace: openshift-ingress-operator
+spec:
+  routeSelector:
+    matchLabels:
+      router: dev 2
+  domain: "dev.serverless.cluster.example.com" 3
+  # ...
+---
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: ingress-prod 4
+  namespace: openshift-ingress-operator
+spec:
+  routeSelector:
+    matchLabels:
+      router: prod 5
+  domain: "prod.serverless.cluster.example.com" 6
+  # ...
+```
+
+Name of the first ingress shard.
+A label selector to match the ingress-dev shard.
+A custom domain for the ingress-dev shard.
+Name of the second ingress shard.
+A label selector to match the ingress-prod shard.
+A custom domain for the ingress-prod shard.
+
+# Configuring custom domains in the KnativeServing CR
+
+After configuring OpenShift ingress shards, you must configure Knative Serving to match them.
+
+* In the KnativeServing CR, configure Serving to use the same domains and labels as your ingress shards by adding the spec.config.domain field:
+Example KnativeServing CR
+
+```yaml
+spec:
+  config:
+    domain: 1
+      dev.serverless.cluster.example.com: |
+        selector:
+          router: dev
+      prod.serverless.cluster.example.com: |
+        selector:
+          router: prod
+  # ...
+```
+
+These values need to match the values in the ingress shard configuration.
+
+# Targeting a specific ingress shard in the Knative Service
+
+After configuring ingress sharding and Knative Serving, you can target a specific ingress shard in your Knative Service resources using a label.
+
+* In your Service CR, add the label selector that matches a specific shard:
+Example Service CR
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: hello-dev
+  labels:
+    router: dev 1
+spec:
+  template:
+    spec:
+      containers:
+      - image: docker.io/openshift/hello-openshift
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: hello-prod
+  labels:
+    router: prod 1
+spec:
+  template:
+    spec:
+      containers:
+      - image: docker.io/openshift/hello-openshift
+  # ...
+```
+
+The labels must match the configuration in the KnativeServing CR.
+
+# Verifying Serving with OpenShift ingress sharding configuration
+
+After configuring ingress sharding, Knative Serving, and your service, you can verify that your service uses the correct route and the selected ingress shard.
+
+1. Print information about the services in the cluster by running the following command:
+
+```terminal
+$ oc get ksvc
+```
+
+Example output
+
+```terminal
+NAME         URL                                                             LATESTCREATED      LATESTREADY        READY   REASON
+hello-dev    https://hello-dev-default.dev.serverless.cluster.example.com    hello-dev-00001    hello-dev-00001    True
+hello-prod   https://hello-prod-default.prod.serverless.cluster.example.com  hello-prod-00001   hello-prod-00001   True
+```
+
+2. Verify that your service uses the correct route and the selected ingress shard by running the following command:
+
+```terminal
+$ oc get route -n knative-serving-ingress -o jsonpath='{range .items[*]}{@.metadata.name}{" "}{@.spec.host}{" "}{@.status.ingress[*].routerName}{"\n"}{end}'
+```
+
+Example output
+
+```terminal
+route-19e6628b-77af-4da0-9b4c-1224934b2250-323461616533 hello-prod-default.prod.serverless.cluster.example.com ingress-prod
+route-cb5085d9-b7da-4741-9a56-96c88c6adaaa-373065343266 hello-dev-default.dev.serverless.cluster.example.com ingress-dev
+```

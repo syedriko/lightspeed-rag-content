@@ -1,0 +1,28 @@
+# URL scheme for external routes
+
+The URL scheme of external routes defaults to HTTPS for enhanced security. This scheme is determined by the default-external-scheme key in the KnativeServing custom resource (CR) spec.
+
+# Setting the URL scheme for external routes
+
+
+```yaml
+...
+spec:
+  config:
+    network:
+      default-external-scheme: "https"
+...
+```
+
+
+You can override the default spec to use HTTP by modifying the default-external-scheme key:
+
+
+```yaml
+...
+spec:
+  config:
+    network:
+      default-external-scheme: "http"
+...
+```

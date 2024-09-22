@@ -1,0 +1,31 @@
+# Deleting triggers from the command line
+
+Using the Knative (kn) CLI to delete a trigger provides a streamlined and intuitive user interface.
+
+# Deleting a trigger by using the Knative CLI
+
+You can use the kn trigger delete command to delete a trigger.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have installed the Knative (kn) CLI.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+* Delete a trigger:
+
+```terminal
+$ kn trigger delete <trigger_name>
+```
+
+
+1. List existing triggers:
+
+```terminal
+$ kn trigger list
+```
+
+2. Verify that the trigger no longer exists:
+Example output
+
+```terminal
+No triggers found.
+```

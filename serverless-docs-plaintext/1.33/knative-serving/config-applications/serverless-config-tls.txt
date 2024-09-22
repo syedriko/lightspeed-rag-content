@@ -1,0 +1,58 @@
+# Configuring TLS authentication
+
+
+You can use Transport Layer Security (TLS) to encrypt Knative traffic and for authentication.
+TLS is the only supported method of traffic encryption for Knative Kafka. Red Hat recommends using both SASL and TLS together for Knative broker for Apache Kafka resources.
+
+[NOTE]
+----
+If you want to enable internal TLS with a Red Hat OpenShift Service Mesh integration, you must enable Service Mesh with mTLS instead of the internal encryption explained in the following procedure.
+For OpenShift Container Platform and Red Hat OpenShift Service on AWS, see the documentation for Enabling Knative Serving metrics when using Service Mesh with mTLS.
+----
+
+# Enabling TLS authentication for internal traffic
+
+OpenShift Serverless supports TLS edge termination by default, so that HTTPS traffic from end users is encrypted. However, internal traffic behind the OpenShift route is forwarded to applications by using plain data. By enabling TLS for internal traffic, the traffic sent between components is encrypted, which makes this traffic more secure.
+
+
+[NOTE]
+----
+If you want to enable internal TLS with a Red Hat OpenShift Service Mesh integration, you must enable Service Mesh with mTLS instead of the internal encryption explained in the following procedure.
+----
+
+
+[IMPORTANT]
+----
+{FeatureName} is a Technology Preview feature only. Technology Preview features
+are not supported with Red Hat production service level agreements (SLAs) and
+might not be functionally complete. Red Hat does not recommend using them
+in production. These features provide early access to upcoming product
+features, enabling customers to test functionality and provide feedback during
+the development process.
+For more information about the support scope of Red Hat Technology Preview features, see Technology Preview Features Support Scope.
+----
+
+* You have installed the OpenShift Serverless Operator and Knative Serving.
+* You have installed the OpenShift (oc) CLI.
+
+1. Create or update your KnativeServing resource and make sure that it includes the internal-encryption: "true" field in the spec:
+
+```yaml
+...
+spec:
+  config:
+    network:
+      internal-encryption: "true"
+...
+```
+
+2. Restart the activator pods in the knative-serving namespace to load the certificates:
+
+```terminal
+$ oc delete pod -n knative-serving --selector app=activator
+```
+
+
+* Configuring TLS authentication for the Knative broker for Apache Kafka
+* Configuring TLS authentication for channels for Apache Kafka
+* Enabling Knative Serving metrics when using Service Mesh with mTLS

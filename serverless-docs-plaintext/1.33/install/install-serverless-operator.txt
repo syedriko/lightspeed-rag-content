@@ -1,0 +1,158 @@
+# Installing the OpenShift Serverless Operator
+
+
+Installing the OpenShift Serverless Operator enables you to install and use Knative Serving, Knative Eventing, and the Knative broker for Apache Kafka on a OpenShift Container Platform cluster. The OpenShift Serverless Operator manages Knative custom resource definitions (CRDs) for your cluster and enables you to configure them without directly modifying individual config maps for each component.
+
+# OpenShift Serverless Operator resource requirements
+
+The following sample setup might help you to estimate the minimum resource requirements for your OpenShift Serverless Operator installation. Your specific requirements might be significantly different, and might grow as your use of OpenShift Serverless increases.
+
+The test suite used in the sample setup has the following parameters:
+
+* An OpenShift Container Platform cluster with:
+* 10 workers (8 vCPU, 16GiB memory)
+* 3 workers dedicated to Kafka
+* 2 workers dedicated to Prometheus
+* 5 workers remaining for both Serverless and test deployments
+* 89 test scenarios running in parallel, mainly focused on using the control plane. Testing scenarios typically have a Knative Service sending events through an in-memory channel, a Kafka channel, an in-memory broker, or a Kafka broker to either a Deployment or a Knative Service.
+* 48 re-creation scenarios, where the testing scenario is repeatedly being deleted and re-created.
+* 41 stable scenarios, where events are sent throughout the test run slowly but continuously.
+* The test setup contains, in total:
+* 170 Knative Services
+* 20 In-Memory Channels
+* 24 Kafka Channels
+* 52 Subscriptions
+* 42 Brokers
+* 68 Triggers
+
+The following table details the minimal resource requirements for a Highly-Available (HA) setup discovered by the test suite:
+
+
+
+The following table details the minimal resource requirements for a non-HA setup discovered by the test suite:
+
+
+
+# Installing the OpenShift Serverless Operator from the web console
+
+You can install the OpenShift Serverless Operator from the OperatorHub by using the OpenShift Container Platform web console. Installing this Operator enables you to install and use Knative components.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* For OpenShift Container Platform, your cluster has the Marketplace capability enabled or the Red Hat Operator catalog source configured manually.
+* You have logged in to the  web console.
+
+1. In the web console, navigate to the Operators -> OperatorHub page.
+2. Scroll, or type the keyword Serverless into the Filter by keyword box to find the OpenShift Serverless Operator.
+3. Review the information about the Operator and click Install.
+4. On the Install Operator page:
+1. The Installation Mode is All namespaces on the cluster (default). This mode installs the Operator in the default openshift-serverless namespace to watch and be made available to all namespaces in the cluster.
+2. The Installed Namespace is openshift-serverless.
+3. Select an Update Channel.
+* The stable channel enables installation of the latest stable release of the OpenShift Serverless Operator. The stable channel is the default.
+* To install another version, specify the corresponding stable-x.y channel, for example stable-1.29.
+4. Select the stable channel as the Update Channel. The stable channel will enable installation of the latest stable release of the OpenShift Serverless Operator.
+5. Select Automatic or Manual approval strategy.
+5. Click Install to make the Operator available to the selected namespaces on this OpenShift Container Platform cluster.
+6. From the Catalog -> Operator Management page, you can monitor the OpenShift Serverless Operator subscription's installation and upgrade progress.
+1. If you selected a Manual approval strategy, the subscription's upgrade status will remain Upgrading until you review and approve its install plan. After approving on the Install Plan page, the subscription upgrade status moves to Up to date.
+2. If you selected an Automatic approval strategy, the upgrade status should resolve to Up to date without intervention.
+
+After the Subscription&#8217;s upgrade status is Up to date, select Catalog &#8594; Installed Operators to verify that the OpenShift Serverless Operator eventually shows up and its Status ultimately resolves to InstallSucceeded in the relevant namespace.
+
+If it does not:
+
+1. Switch to the Catalog -> Operator Management page and inspect the Operator Subscriptions and Install Plans tabs for any failure or errors under Status.
+2. Check the logs in any pods in the openshift-serverless project on the Workloads -> Pods page that are reporting issues to troubleshoot further.
+
+
+[IMPORTANT]
+----
+If you want to use Red Hat OpenShift distributed tracing with OpenShift Serverless, you must install and configure Red Hat OpenShift distributed tracing before you install Knative Serving or Knative Eventing.
+----
+
+# Installing the OpenShift Serverless Operator from the CLI
+
+You can install the OpenShift Serverless Operator from the OperatorHub by using the CLI. Installing this Operator enables you to install and use Knative components.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* For OpenShift Container Platform, your cluster has the Marketplace capability enabled or the Red Hat Operator catalog source configured manually.
+* You have logged in to the cluster.
+
+1. Create a YAML file containing Namespace, OperatorGroup, and Subscription objects to subscribe a namespace to the OpenShift Serverless Operator. For example, create the file serverless-subscription.yaml with the following content:
+Example subscription
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-serverless
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: serverless-operators
+  namespace: openshift-serverless
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: serverless-operator
+  namespace: openshift-serverless
+spec:
+  channel: stable 1
+  name: serverless-operator 2
+  source: redhat-operators 3
+  sourceNamespace: openshift-marketplace 4
+```
+
+The channel name of the Operator. The stable channel enables installation of the most recent stable version of the OpenShift Serverless Operator. To install another version, specify the corresponding stable-x.y channel, for example stable-1.29.
+The name of the Operator to subscribe to. For the OpenShift Serverless Operator, this is always serverless-operator.
+The name of the CatalogSource that provides the Operator. Use redhat-operators for the default OperatorHub catalog sources.
+The namespace of the CatalogSource. Use openshift-marketplace for the default OperatorHub catalog sources.
+2. Create the Subscription object:
+
+```
+$ oc apply -f serverless-subscription.yaml
+```
+
+
+Check that the cluster service version (CSV) has reached the Succeeded phase:
+
+
+```yaml
+$ oc get csv
+```
+
+
+
+```yaml
+NAME                          DISPLAY                        VERSION   REPLACES                      PHASE
+serverless-operator.v1.25.0   Red Hat OpenShift Serverless   1.25.0    serverless-operator.v1.24.0   Succeeded
+```
+
+
+
+[IMPORTANT]
+----
+If you want to use Red Hat OpenShift distributed tracing with OpenShift Serverless, you must install and configure Red Hat OpenShift distributed tracing before you install Knative Serving or Knative Eventing.
+----
+
+# Global configuration
+
+The OpenShift Serverless Operator manages the global configuration of a Knative installation, including propagating values from the KnativeServing and KnativeEventing custom resources to system config maps. Any updates to config maps which are applied manually are overwritten by the Operator. However, modifying the Knative custom resources allows you to set values for these config maps.
+
+Knative has multiple config maps that are named with the prefix config-. All Knative config maps are created in the same namespace as the custom resource that they apply to. For example, if the KnativeServing custom resource is created in the knative-serving namespace, all Knative Serving config maps are also created in this namespace.
+
+The spec.config in the Knative custom resources have one <name> entry for each config map, named config-<name>, with a value which is be used for the config map data.
+
+# Additional resources for OpenShift Container Platform
+
+* Managing resources from custom resource definitions
+* Understanding persistent storage
+* Configuring a custom PKI
+
+# Next steps
+
+* After the OpenShift Serverless Operator is installed, you can install Knative Serving or install Knative Eventing.

@@ -1,0 +1,85 @@
+# Multi-container support for Serving
+
+You can deploy a multi-container pod by using a single Knative service. This method is useful for separating application responsibilities into smaller, specialized parts.
+
+# Configuring a multi-container service
+
+Multi-container support is enabled by default. You can create a multi-container pod by specifiying multiple containers in the service.
+
+1. Modify your service to include additional containers. Only one container can handle requests, so specify ports for exactly one container. Here is an example configuration with two containers:
+Multiple containers configuration
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+...
+spec:
+  template:
+    spec:
+      containers:
+        - name: first-container 1
+          image: gcr.io/knative-samples/helloworld-go
+          ports:
+            - containerPort: 8080 2
+        - name: second-container 3
+          image: gcr.io/knative-samples/helloworld-java
+```
+
+First container configuration.
+Port specification for the first container.
+Second container configuration.
+
+# Probing a multi-container service
+
+You can specify readiness and liveness probes for multiple containers. This feature is not enabled by default and you must configure it using the KnativeServing custom resource (CR).
+
+1. Configure multi-container probing for your service by enabling the multi-container-probing feature in the KnativeServing CR.
+Multi-container probing configuration
+
+```yaml
+...
+spec:
+  config:
+    features:
+      "multi-container-probing": enabled 1
+...
+```
+
+Enabled multi-container-probing feature
+2. Apply the updated KnativeServing CR.
+
+```terminal
+$ oc apply -f <filename>
+```
+
+3. Modify your multi-container service to include the specified probes.
+Multi-container probing
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+...
+spec:
+ template:
+   spec:
+     containers:
+       - name: first-container
+         image: ghcr.io/knative/helloworld-go:latest
+         ports:
+           - containerPort: 8080
+         readinessProbe: 1
+           httpGet:
+             port: 8080
+       - name: second-container
+         image: gcr.io/knative-samples/helloworld-java
+         readinessProbe: 2
+           httpGet:
+             port: 8090
+```
+
+Readiness probe of the first container
+Readiness probe of the second container
+
+## Additional resources
+
+* General understanding of Knative Probing

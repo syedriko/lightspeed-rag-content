@@ -1,0 +1,681 @@
+# Integrating Service Mesh with OpenShift Serverless
+
+
+The OpenShift Serverless Operator provides Kourier as the default ingress for Knative. However, you can use Service Mesh with OpenShift Serverless whether Kourier is enabled or not. Integrating with Kourier disabled allows you to configure additional networking and routing options that the Kourier ingress does not support, such as mTLS functionality.
+Note the following assumptions and limitations:
+* All Knative internal components, as well as Knative Services, are part of the Service Mesh and have sidecars injection enabled. This means that strict mTLS is enforced within the whole mesh. All requests to Knative Services require an mTLS connection, with the client having to send its certificate, except calls coming from OpenShift Routing.
+* OpenShift Serverless with Service Mesh integration can only target one service mesh. Multiple meshes can be present in the cluster, but OpenShift Serverless is only available on one of them.
+* Changing the target ServiceMeshMemberRoll that OpenShift Serverless is part of, meaning moving OpenShift Serverless to another mesh, is not supported. The only way to change the targeted Service mesh is to uninstall and reinstall OpenShift Serverless.
+
+# Prerequisites
+
+* You have access to an {product-title} account with cluster administrator access.
+* You have installed the OpenShift CLI (oc).
+* You have installed the Serverless Operator.
+* You have installed the Red Hat OpenShift Service Mesh Operator.
+* The examples in the following procedures use the domain example.com. The example certificate for this domain is used as a certificate authority (CA) that signs the subdomain certificate.
+
+To complete and verify these procedures in your deployment, you need either a certificate signed by a widely trusted public CA or a CA provided by your organization. Example commands must be adjusted according to your domain, subdomain, and CA.
+* You must configure the wildcard certificate to match the domain of your OpenShift Container Platform cluster. For example, if your OpenShift Container Platform console address is https://console-openshift-console.apps.openshift.example.com, you must configure the wildcard certificate so that the domain is *.apps.openshift.example.com. For more information about configuring wildcard certificates, see the following topic about Creating a certificate to encrypt incoming external traffic.
+* If you want to use any domain name, including those which are not subdomains of the default OpenShift Container Platform cluster domain, you must set up domain mapping for those domains. For more information, see the OpenShift Serverless documentation about Creating a custom domain mapping.
+
+
+[IMPORTANT]
+----
+OpenShift Serverless only supports the use of Red Hat OpenShift Service Mesh functionality that is explicitly documented in this guide, and does not support other undocumented features.
+Using Serverless 1.31 with Service Mesh is only supported with Service Mesh version 2.2 or later. For details and information on versions other than 1.31, see the "Red Hat OpenShift Serverless Supported Configurations" page.
+----
+
+# Additional resources
+
+* Red Hat OpenShift Serverless Supported Configurations
+* Kourier and Istio ingresses
+
+# Creating a certificate to encrypt incoming external traffic
+
+By default, the Service Mesh mTLS feature only secures traffic inside of the Service Mesh itself, between the ingress gateway and individual pods that have sidecars. To encrypt traffic as it flows into the OpenShift Container Platform cluster, you must generate a certificate before you enable the OpenShift Serverless and Service Mesh integration.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator and Knative Serving.
+* Install the OpenShift CLI (oc).
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads.
+
+1. Create a root certificate and private key that signs the certificates for your Knative services:
+
+```terminal
+$ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 \
+    -subj '/O=Example Inc./CN=example.com' \
+    -keyout root.key \
+    -out root.crt
+```
+
+2. Create a wildcard certificate:
+
+```terminal
+$ openssl req -nodes -newkey rsa:2048 \
+    -subj "/CN=*.apps.openshift.example.com/O=Example Inc." \
+    -keyout wildcard.key \
+    -out wildcard.csr
+```
+
+3. Sign the wildcard certificate:
+
+```terminal
+$ openssl x509 -req -days 365 -set_serial 0 \
+    -CA root.crt \
+    -CAkey root.key \
+    -in wildcard.csr \
+    -out wildcard.crt
+```
+
+4. Create a secret by using the wildcard certificate:
+
+```terminal
+$ oc create -n istio-system secret tls wildcard-certs \
+    --key=wildcard.key \
+    --cert=wildcard.crt
+```
+
+
+This certificate is picked up by the gateways created when you integrate OpenShift Serverless with Service Mesh, so that the ingress gateway serves traffic with this certificate.
+
+# Integrating Service Mesh with OpenShift Serverless
+
+## Verifying installation prerequisites
+
+Before installing and configuring the Service Mesh integration with Serverless, verify that the prerequisites have been met.
+
+1. Check for conflicting gateways:
+Example command
+
+```terminal
+$ oc get gateway -A -o jsonpath='{range .items[*]}{@.metadata.namespace}{"/"}{@.metadata.name}{" "}{@.spec.servers}{"\n"}{end}' | column -t
+```
+
+Example output
+
+```terminal
+knative-serving/knative-ingress-gateway  [{"hosts":["*"],"port":{"name":"https","number":443,"protocol":"HTTPS"},"tls":{"credentialName":"wildcard-certs","mode":"SIMPLE"}}]
+knative-serving/knative-local-gateway    [{"hosts":["*"],"port":{"name":"http","number":8081,"protocol":"HTTP"}}]
+```
+
+
+This command should not return a Gateway that binds port: 443 and hosts: ["*"], except the Gateways in knative-serving and Gateways that are part of another Service Mesh instance.
+
+[NOTE]
+----
+The mesh that Serverless is part of must be distinct and preferably reserved only for Serverless workloads. That is because additional configuration, such as Gateways, might interfere with the Serverless gateways knative-local-gateway and knative-ingress-gateway. Red Hat OpenShift Service Mesh only allows one Gateway to claim a wildcard host binding (hosts: ["*"]) on the same port (port: 443). If another Gateway is already binding this configuration, a separate mesh has to be created for Serverless workloads.
+----
+2. Check whether Red Hat OpenShift Service Mesh istio-ingressgateway is exposed as type NodePort or LoadBalancer:
+Example command
+
+```terminal
+$ oc get svc -A | grep istio-ingressgateway
+```
+
+Example output
+
+```terminal
+istio-system   istio-ingressgateway  ClusterIP  172.30.46.146 none>   15021/TCP,80/TCP,443/TCP     9m50s
+```
+
+
+This command should not return a Service object of type NodePort or LoadBalancer.
+
+[NOTE]
+----
+Cluster external Knative Services are expected to be called via OpenShift Ingress using OpenShift Routes. It is not supported to access Service Mesh directly, such as by exposing the istio-ingressgateway using a Service object with type NodePort or LoadBalancer.
+----
+
+## Installing and configuring Service Mesh
+
+To integrate Serverless with Service Mesh, you need to install Service Mesh with a specific configuration.
+
+1. Create a ServiceMeshControlPlane resource in the istio-system namespace with the following configuration:
+
+[IMPORTANT]
+----
+If you have an existing ServiceMeshControlPlane object, make sure that you have the same configuration applied.
+----
+
+```yaml
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: basic
+  namespace: istio-system
+spec:
+  profiles:
+  - default
+  security:
+    dataPlane:
+      mtls: true 1
+  techPreview:
+    meshConfig:
+      defaultConfig:
+        terminationDrainDuration: 35s 2
+  gateways:
+    ingress:
+      service:
+        metadata:
+          labels:
+            knative: ingressgateway 3
+  proxy:
+    networking:
+      trafficControl:
+        inbound:
+          excludedPorts: 4
+          - 8444 # metrics
+          - 8022 # serving: wait-for-drain k8s pre-stop hook
+```
+
+Enforce strict mTLS in the mesh. Only calls using a valid client certificate are allowed.
+Serverless has a graceful termination for Knative Services of 30 seconds. istio-proxy needs to have a longer termination duration to make sure no requests are dropped.
+Define a specific selector for the ingress gateway to target only the Knative gateway.
+These ports are called by Kubernetes and cluster monitoring, which are not part of the mesh and cannot be called using mTLS. Therefore, these ports are excluded from the mesh.
+2. Add the namespaces that you would like to integrate with Service Mesh to the ServiceMeshMemberRoll object as members:
+Example servicemesh-member-roll.yaml configuration file
+
+```yaml
+apiVersion: maistra.io/v1
+kind: ServiceMeshMemberRoll
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  members: 1
+    - knative-serving
+    - knative-eventing
+    - your-OpenShift-projects
+```
+
+A list of namespaces to be integrated with Service Mesh.
+
+[IMPORTANT]
+----
+This list of namespaces must include the knative-serving and knative-eventing namespaces.
+----
+3. Apply the ServiceMeshMemberRoll resource:
+
+```terminal
+$ oc apply -f servicemesh-member-roll.yaml
+```
+
+4. Create the necessary gateways so that Service Mesh can accept traffic. The following example uses the knative-local-gateway object with the ISTIO_MUTUAL mode (mTLS):
+Example istio-knative-gateways.yaml configuration file
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: knative-ingress-gateway
+  namespace: knative-serving
+spec:
+  selector:
+    knative: ingressgateway
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "*"
+      tls:
+        mode: SIMPLE
+        credentialName: <wildcard_certs> 1
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+ name: knative-local-gateway
+ namespace: knative-serving
+spec:
+ selector:
+   knative: ingressgateway
+ servers:
+   - port:
+       number: 8081
+       name: https
+       protocol: HTTPS 2
+     tls:
+       mode: ISTIO_MUTUAL 2
+     hosts:
+       - "*"
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: knative-local-gateway
+ namespace: istio-system
+ labels:
+   experimental.istio.io/disable-gateway-port-translation: "true"
+spec:
+ type: ClusterIP
+ selector:
+   istio: ingressgateway
+ ports:
+   - name: http2
+     port: 80
+     targetPort: 8081
+```
+
+Name of the secret containing the wildcard certificate.
+The knative-local-gateway object serves HTTPS traffic and expects all clients to send requests using mTLS. This means that only traffic coming from within Service Mesh is possible. Workloads from outside the Service Mesh must use the external domain via OpenShift Routing.
+5. Apply the Gateway resources:
+
+```terminal
+$ oc apply -f istio-knative-gateways.yaml
+```
+
+
+## Installing and configuring Serverless
+
+After installing Service Mesh, you need to install Serverless with a specific configuration.
+
+1. Install Knative Serving with the following KnativeServing custom resource, which enables the Istio integration:
+Example knative-serving-config.yaml configuration file
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec:
+  ingress:
+    istio:
+      enabled: true 1
+  deployments: 2
+  - name: activator
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: autoscaler
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  config:
+    istio: 3
+      gateway.knative-serving.knative-ingress-gateway: istio-ingressgateway.<your-istio-namespace>.svc.cluster.local
+      local-gateway.knative-serving.knative-local-gateway: knative-local-gateway.<your-istio-namespace>.svc.cluster.local
+```
+
+Enable Istio integration.
+Enable sidecar injection for Knative Serving data plane pods.
+If your istio is not running in the istio-system namespace, you need to set these two flags with the correct namespace.
+2. Apply the KnativeServing resource:
+
+```terminal
+$ oc apply -f knative-serving-config.yaml
+```
+
+3. Install Knative Eventing with the following KnativeEventing object, which enables the Istio integration:
+Example knative-eventing-config.yaml configuration file
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+spec:
+  config:
+    features:
+      istio: enabled 1
+  workloads: 2
+  - name: pingsource-mt-adapter
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: imc-dispatcher
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: mt-broker-ingress
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: mt-broker-filter
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+```
+
+Enable Eventing Istio controller to create a DestinationRule for each InMemoryChannel or KafkaChannel service.
+Enable sidecar injection for Knative Eventing pods.
+4. Apply the KnativeEventing resource:
+
+```terminal
+$ oc apply -f knative-eventing-config.yaml
+```
+
+5. Install Knative Kafka with the following KnativeKafka custom resource, which enables the Istio integration:
+Example knative-kafka-config.yaml configuration file
+
+```yaml
+apiVersion: operator.serverless.openshift.io/v1alpha1
+kind: KnativeKafka
+metadata:
+  name: knative-kafka
+  namespace: knative-eventing
+spec:
+  channel:
+    enabled: true
+    bootstrapServers: <bootstrap_servers> 1
+  source:
+    enabled: true
+  broker:
+    enabled: true
+    defaultConfig:
+      bootstrapServers: <bootstrap_servers> 1
+      numPartitions: <num_partitions>
+      replicationFactor: <replication_factor>
+    sink:
+      enabled: true
+  workloads: 2
+  - name: kafka-controller
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: kafka-broker-receiver
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: kafka-broker-dispatcher
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: kafka-channel-receiver
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: kafka-channel-dispatcher
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: kafka-source-dispatcher
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+  - name: kafka-sink-receiver
+    annotations:
+      "sidecar.istio.io/inject": "true"
+      "sidecar.istio.io/rewriteAppHTTPProbers": "true"
+```
+
+The Apache Kafka cluster URL, for example my-cluster-kafka-bootstrap.kafka:9092.
+Enable sidecar injection for Knative Kafka pods.
+6. Apply the KnativeEventing object:
+
+```terminal
+$ oc apply -f knative-kafka-config.yaml
+```
+
+7. Install ServiceEntry to inform Service Mesh of the communication between KnativeKafka components and an Apache Kafka cluster:
+Example kafka-cluster-serviceentry.yaml configuration file
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: kafka-cluster
+  namespace: knative-eventing
+spec:
+  hosts: 1
+    - <bootstrap_servers_without_port>
+  exportTo:
+    - "."
+  ports: 2
+    - number: 9092
+      name: tcp-plain
+      protocol: TCP
+    - number: 9093
+      name: tcp-tls
+      protocol: TCP
+    - number: 9094
+      name: tcp-sasl-tls
+      protocol: TCP
+    - number: 9095
+      name: tcp-sasl-tls
+      protocol: TCP
+    - number: 9096
+      name: tcp-tls
+      protocol: TCP
+  location: MESH_EXTERNAL
+  resolution: NONE
+```
+
+The list of Apache Kafka cluster hosts, for example my-cluster-kafka-bootstrap.kafka.
+Apache Kafka cluster listeners ports.
+
+[NOTE]
+----
+The listed ports in spec.ports are example TPC ports. The actual values depend on how the Apache Kafka cluster is configured.
+----
+8. Apply the ServiceEntry resource:
+
+```terminal
+$ oc apply -f kafka-cluster-serviceentry.yaml
+```
+
+
+## Verifying the integration
+
+After installing Service Mesh and Serverless with Istio enabled, you can verify that the integration works.
+
+1. Create a Knative Service that has sidecar injection enabled and uses a pass-through route:
+Example knative-service.yaml configuration file
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: <service_name>
+  namespace: <namespace> 1
+  annotations:
+    serving.knative.openshift.io/enablePassthrough: "true" 2
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true" 3
+        sidecar.istio.io/rewriteAppHTTPProbers: "true"
+    spec:
+      containers:
+      - image: <image_url>
+```
+
+A namespace that is part of the service mesh member roll.
+Instruct Knative Serving to generate a pass-through enabled route, so that the certificates you have generated are served through the ingress gateway directly.
+Inject Service Mesh sidecars into the Knative service pods.
+
+[IMPORTANT]
+----
+Always add the annotation from this example to all of your Knative Service to make them work with Service Mesh.
+----
+2. Apply the Service resource:
+
+```terminal
+$ oc apply -f knative-service.yaml
+```
+
+3. Access your serverless application by using a secure connection that is now trusted by the CA:
+
+```terminal
+$ curl --cacert root.crt <service_url>
+```
+
+
+For example, run:
+Example command
+
+```terminal
+$ curl --cacert root.crt https://hello-default.apps.openshift.example.com
+```
+
+Example output
+
+```terminal
+Hello Openshift!
+```
+
+
+# Enabling Knative Serving and Knative Eventing metrics when using Service Mesh with mTLS
+
+If Service Mesh is enabled with Mutual Transport Layer Security (mTLS), metrics for Knative Serving and Knative Eventing are disabled by default, because Service Mesh prevents Prometheus from scraping metrics. You can enable Knative Serving and Knative Eventing metrics when using Service Mesh and mTLS.
+
+* You have one of the following permissions to access the cluster:
+* Cluster administrator permissions on OpenShift Container Platform
+* Cluster administrator permissions on Red Hat OpenShift Service on AWS
+* Dedicated administrator permissions on OpenShift Dedicated
+* You have installed the OpenShift CLI (oc).
+* You have access to a project with the appropriate roles and permissions to create applications and other workloads.
+* You have installed the OpenShift Serverless Operator, Knative Serving, and Knative Eventing on your cluster.
+* You have installed Red Hat OpenShift Service Mesh with the mTLS functionality enabled.
+
+1. Specify prometheus as the metrics.backend-destination in the observability spec of the Knative Serving custom resource (CR):
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec:
+  config:
+    observability:
+      metrics.backend-destination: "prometheus"
+...
+```
+
+
+This step prevents metrics from being disabled by default.
+
+[NOTE]
+----
+When you configure ServiceMeshControlPlane with manageNetworkPolicy: false, you must use the annotation on KnativeEventing to ensure proper event delivery.
+----
+
+The same mechanism is used for Knative Eventing. To enable metrics for Knative Eventing, you need to specify prometheus as the metrics.backend-destination in the observability spec of the Knative Eventing custom resource (CR) as follows:
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+spec:
+  config:
+    observability:
+      metrics.backend-destination: "prometheus"
+...
+```
+
+2. Modify and reapply the default Service Mesh control plane in the istio-system namespace, so that it includes the following spec:
+
+```yaml
+...
+spec:
+  proxy:
+    networking:
+      trafficControl:
+        inbound:
+          excludedPorts:
+          - 8444
+...
+```
+
+
+# Disabling the default network policies
+
+The OpenShift Serverless Operator generates the network policies by default. To disable the default network policy generation, you can add the serverless.openshift.io/disable-istio-net-policies-generation annotation in the KnativeEventing and KnativeServing custom resources (CRs).
+
+* You have one of the following permissions to access the cluster:
+* Cluster administrator permissions on OpenShift Container Platform
+* Cluster administrator permissions on Red Hat OpenShift Service on AWS
+* Dedicated administrator permissions on OpenShift Dedicated
+* You have installed the OpenShift CLI (oc).
+* You have access to a project with the appropriate roles and permissions to create applications and other workloads.
+* You have installed the OpenShift Serverless Operator, Knative Serving, and Knative Eventing on your cluster.
+* You have installed Red Hat OpenShift Service Mesh with the mTLS functionality enabled.
+
+* Add the serverless.openshift.io/disable-istio-net-policies-generation: "true" annotation to your Knative custom resources.
+
+[NOTE]
+----
+The OpenShift Serverless Operator generates the required network policies by default. When you configure ServiceMeshControlPlane with manageNetworkPolicy: false, you must disable the default network policy generation to ensure proper event delivery. To disable the default network policy generation, you can add the serverless.openshift.io/disable-istio-net-policies-generation annotation in the KnativeEventing and KnativeServing custom resources (CRs).
+----
+1. Annotate the KnativeEventing CR by running the following command:
+
+```terminal
+$ oc edit KnativeEventing -n knative-eventing
+```
+
+Example KnativeEventing CR
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+  annotations:
+    serverless.openshift.io/disable-istio-net-policies-generation: "true"
+```
+
+2. Annotate the KnativeServing CR by running the following command:
+
+```terminal
+$ oc edit KnativeServing -n knative-serving
+```
+
+Example KnativeServing CR
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+  annotations:
+    serverless.openshift.io/disable-istio-net-policies-generation: "true"
+```
+
+
+# Improving net-istio memory usage by using secret filtering for Service Mesh
+
+By default, the informers implementation for the Kubernetes client-go library fetches all resources of a particular type. This can lead to a substantial overhead when many resources are available, which can cause the Knative net-istio ingress controller to fail on large clusters due to memory leaking. However, a filtering mechanism is available for the Knative net-istio ingress controller, which enables the controllers to only fetch Knative related secrets.
+
+The secret filtering is enabled by default on the OpenShift Serverless Operator side. An environment variable, ENABLE_SECRET_INFORMER_FILTERING_BY_CERT_UID=true, is added by default to the net-istio controller pods.
+
+
+[IMPORTANT]
+----
+If you enable secret filtering, you must label all of your secrets with  networking.internal.knative.dev/certificate-uid: "<id>". Otherwise, Knative Serving does not detect them, which leads to failures. You must label both new and existing secrets.
+----
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads.
+* Install Red Hat OpenShift Service Mesh. OpenShift Serverless with Service Mesh only is supported for use with Red Hat OpenShift Service Mesh version 2.0.5 or later.
+* Install the OpenShift Serverless Operator and Knative Serving.
+* Install the OpenShift CLI (oc).
+
+You can disable the secret filtering by setting the ENABLE_SECRET_INFORMER_FILTERING_BY_CERT_UID variable to false by using the  workloads field in the KnativeServing custom resource (CR).
+
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec:
+...
+  workloads:
+    - env:
+        - container: controller
+          envVars:
+            - name: ENABLE_SECRET_INFORMER_FILTERING_BY_CERT_UID
+              value: 'false'
+      name: net-istio-controller
+```

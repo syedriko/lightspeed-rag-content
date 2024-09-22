@@ -1,0 +1,2 @@
+# Knative service metrics exposed by default
+

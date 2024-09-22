@@ -1,0 +1,88 @@
+# Managing subscriptions
+
+
+
+# Describing subscriptions by using the Knative CLI
+
+You can use the kn subscription describe command to print information about a subscription in the terminal by using the Knative (kn) CLI. Using the Knative CLI to describe subscriptions provides a more streamlined and intuitive user interface than viewing YAML files directly.
+
+* You have installed the Knative (kn) CLI.
+* You have created a subscription in your cluster.
+
+* Describe a subscription:
+
+```terminal
+$ kn subscription describe <subscription_name>
+```
+
+Example output
+
+```terminal
+Name:            my-subscription
+Namespace:       default
+Annotations:     messaging.knative.dev/creator=openshift-user, messaging.knative.dev/lastModifier=min ...
+Age:             43s
+Channel:         Channel:my-channel (messaging.knative.dev/v1)
+Subscriber:
+  URI:           http://edisplay.default.example.com
+Reply:
+  Name:          default
+  Resource:      Broker (eventing.knative.dev/v1)
+DeadLetterSink:
+  Name:          my-sink
+  Resource:      Service (serving.knative.dev/v1)
+
+Conditions:
+  OK TYPE                  AGE REASON
+  ++ Ready                 43s
+  ++ AddedToChannel        43s
+  ++ ChannelReady          43s
+  ++ ReferencesResolved    43s
+```
+
+
+# Listing subscriptions by using the Knative CLI
+
+You can use the kn subscription list command to list existing subscriptions on your cluster by using the Knative (kn) CLI. Using the Knative CLI to list subscriptions provides a streamlined and intuitive user interface.
+
+* You have installed the Knative (kn) CLI.
+
+* List subscriptions on your cluster:
+
+```terminal
+$ kn subscription list
+```
+
+Example output
+
+```terminal
+NAME             CHANNEL             SUBSCRIBER           REPLY   DEAD LETTER SINK   READY   REASON
+mysubscription   Channel:mychannel   ksvc:event-display                              True
+```
+
+
+# Updating subscriptions by using the Knative CLI
+
+You can use the kn subscription update command as well as the appropriate flags to update a subscription from the terminal by using the Knative (kn) CLI. Using the Knative CLI to update subscriptions provides a more streamlined and intuitive user interface than updating YAML files directly.
+
+* You have installed the Knative (kn) CLI.
+* You have created a subscription.
+
+* Update a subscription:
+
+```terminal
+$ kn subscription update <subscription_name> \
+  --sink <sink_prefix>:<sink_name> \ 1
+  --sink-dead-letter <sink_prefix>:<sink_name> 2
+```
+
+--sink specifies the updated target destination to which the event should be delivered. You can specify the type of the sink by using one of the following prefixes:
+ksvc:: A Knative service.
+channel:: A channel that should be used as destination. Only default channel types can be referenced here.
+broker:: An Eventing broker.
+Optional: --sink-dead-letter is an optional flag that can be used to specify a sink which events should be sent to in cases where events fail to be delivered. For more information, see the OpenShift Serverless Event delivery documentation.
+Example command
+
+```terminal
+$ kn subscription update mysubscription --sink ksvc:event-display
+```

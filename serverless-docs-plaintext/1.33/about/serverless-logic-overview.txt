@@ -1,0 +1,624 @@
+# OpenShift Serverless Logic overview
+
+
+OpenShift Serverless Logic enables developers to define declarative workflow models that orchestrate event-driven, serverless applications.
+You can write the workflow models in YAML or JSON format, which are ideal for developing and deploying serverless applications in cloud or container environments.
+To deploy the workflows in your OpenShift Container Platform, you can use the OpenShift Serverless Logic Operator.
+The following sections provide an overview of the various OpenShift Serverless Logic concepts.
+
+# Events
+
+An event state consists of one or more event definitions. Event definitions are combined to designate the CloudEvent types that the event state listens to. You can use the event state to start a new workflow instance upon the reception of a designated CloudEvent, or to pause the execution of an existing workflow instance until a designated CloudEvent is received.
+
+In an event state definition, the onEvents property is used to group the CloudEvent types that might trigger the same set of actions. The exclusive property in an event definition indicates how an event match is calculated. If the value of exclusive property is false, then all CloudEvent types in the eventRefs array must be received for a match to occur. Otherwise, the reception of any referenced CloudEvent type is considered a match.
+
+The following example shows event definitions, consisting of two CloudEvent types, including noisy and silent:
+
+
+```json
+"events": [
+    {
+      "name": "noisyEvent",
+      "source": "",
+      "type": "noisy",
+      "dataOnly" : "false"
+    },
+    {
+      "name": "silentEvent",
+      "source": "",
+      "type": "silent"
+    }
+  ]
+```
+
+
+To indicate that an event match occurs when both noisy and silent CloudEvent types are received and to execute different actions for both CloudEvent types, define an event state containing both event definitions in separate onEvent items and set the exclusive property to false.
+
+
+```json
+{
+    "name": "waitForEvent",
+    "type": "event",
+    "onEvents": [
+      {
+        "eventRefs": [
+          "noisyEvent"
+         ],
+         "actions": [
+           {
+             "functionRef": "letsGetLoud"
+           }
+         ]
+      },
+      {
+        "eventRefs": [
+           "silentEvent"
+        ],
+        "actions": [
+          {
+            "functionRef": "beQuiet"
+          }
+        ]
+      }
+    ]
+    ,
+    "exclusive": false
+  }
+```
+
+
+# Callbacks
+
+The Callback state performs an action and waits for an event that is produced as a result of the action before resuming the workflow. The action performed by a Callback state is an asynchronous external service invocation. Therefore, the Callback state is suitable to perform fire&wait-for-result operations.
+
+From a workflow perspective, asynchronous service indicates that the control is returned to the caller immediately without waiting for the action to be completed. After the action is completed, a CloudEvent is published to resume the workflow.
+
+
+```json
+{
+        "name": "CheckCredit",
+        "type": "callback",
+        "action": {
+            "functionRef": {
+                "refName": "callCreditCheckMicroservice",
+                "arguments": {
+                    "customer": "${ .customer }"
+                }
+            }
+        },
+        "eventRef": "CreditCheckCompletedEvent",
+        "timeouts": {
+          "stateExecTimeout": "PT15M"
+        },
+        "transition": "EvaluateDecision"
+}
+```
+
+
+
+```yaml
+name: CheckCredit
+type: callback
+action:
+  functionRef:
+    refName: callCreditCheckMicroservice
+    arguments:
+      customer: "${ .customer }"
+eventRef: CreditCheckCompletedEvent
+timeouts:
+  stateExecTimeout: PT15M
+transition: EvaluateDecision
+```
+
+
+The action property defines a function call that triggers an external activity or service. After the action executes, the Callback state waits for a CloudEvent, which indicates the completion of the manual decision by the called service.
+
+After the completion callback event is received, the Callback state completes its execution and transitions to the next defined workflow state or completes workflow execution if it is an end state.
+
+# JQ expressions
+
+Each workflow instance is associated with a data model. A data model consists of a JSON object regardless of whether the workflow file contains YAML or JSON. The initial content of the JSON object depends on how the workflow is started. If the workflow is created using the CloudEvent, then the workflow content is taken from the data property. If the workflow is started through an HTTP POST request, then the workflow content is taken from the request body.
+
+The JQ expressions are used to interact with the data model. The supported expression languages include JsonPath and JQ. The JQ expression language is the default language. You can change the expression language to JsonPath using the expressionLang property.
+
+
+```json
+{
+      "name": "max",
+      "type": "expression",
+      "operation": "{max: .numbers | max_by(.x), min: .numbers | min_by(.y)}"
+    }
+```
+
+
+# Error handling
+
+OpenShift Serverless Logic allows you to define explicit error handling. You can define inside of your workflow model what should happen if errors occur rather than some generic error handling entity. Explicit error handling enables you to handle the errors that might happen during the interactions between the workflow and external systems. When an error occurs, it changes the regular workflow sequence. In these cases, a workflow state transitions to an alternative state that can potentially handle the error, instead of transitioning to the predefined state.
+
+Each workflow state can define error handling, which is related only to errors that might arise during its execution. Error handling defined in one state cannot be used to handle errors that happened during execution of another state during workflow execution.
+
+Unknown errors that may arise during workflow state execution that are not explicitly handled within the workflow definition should be reported by runtime implementations and halt workflow execution.
+
+## Error definition
+
+An error definition in a workflow is composed of the name and code parameters. The name is a short and natural language description of an error, such as wrong parameter. The code parameter helps the implementation to identify the error.
+
+The code parameter is mandatory and the engine uses different strategies to map the provided value to an exception encountered at runtime. The available strategies include FQCN, error message, and status code.
+
+During workflow execution, you must handle the the known workflow errors in the workflow top-level errors property. This property can be either a string type, meaning it can reference a reusable JSON or YAML definition file including the error definitions, or it can have an array type where you can define these checked errors inline in your workflow definition.
+
+The following examples show definitions for both types:
+
+
+```json
+{
+"errors": "file://documents/reusable/errors.json"
+}
+```
+
+
+
+```yaml
+errors: file://documents/reusable/errors.json
+```
+
+
+
+```json
+{
+"errors": [
+  {
+    "name": "Service not found error",
+    "code": "404",
+    "description": "Server has not found anything matching the provided service endpoint information"
+  }
+]
+}
+```
+
+
+
+```yaml
+errors:
+  - name: Service not found error
+    code: '404'
+    description: Server has not found anything matching the provided service endpoint
+      information
+```
+
+
+# Schema definitions
+
+OpenShift Serverless Logic supports two types of schema definitions: input schema definition and output schema definition.
+
+## Input schema definition
+
+The dataInputSchema parameter validates the workflow data input against a defined JSON Schema. It is important to provide dataInputSchema, as it is used to verify if the provided workflow data input is correct before any workflow states are executed.
+
+You can define a dataInputSchema as follows:
+
+
+```json
+"dataInputSchema": {
+   "schema": "URL_to_json_schema",
+   "failOnValidationErrors": false
+}
+```
+
+
+The schema property is a URI, which holds the path to the JSON schema used to validate the workflow data input. The URI can be a classpath URI, a file, or an HTTP URL. If a classpath URI is specified, then the JSON schema file must be placed in the resources section of the project or any other directory included in the classpath.
+
+The failOnValidationErrors is an optional flag that indicates the behavior adopted when the input data does not match the specified JSON schema. If not specified or set to true, an exception is thrown and flow execution fails. If set to false, the flow is executed and a log of level WARN with the validation errors is printed.
+
+## Output schema definition
+
+Output schema definition is applied after workflow execution to verify that the output model has the expected format. It is also useful for Swagger generation purposes.
+
+Similar to Input schema definition, you must specify the URL to the JSON schema, using outputSchema as follows:
+
+
+```json
+"extensions" : [ {
+      "extensionid": "workflow-output-schema",
+      "outputSchema": {
+         "schema" : "URL_to_json_schema",
+          "failOnValidationErrors": false
+     }
+  } ]
+```
+
+
+The same rules described for dataInputSchema are applicable for schema and failOnValidationErrors. The only difference is that the latter flag is applied after workflow execution.
+
+# Custom functions
+
+OpenShift Serverless Logic supports the custom function type, which enables the implementation to extend the function definitions capability. By combining with the operation string, you can use a list of predefined function types.
+
+
+[NOTE]
+----
+Custom function types might not be portable across other runtime implementations.
+----
+
+## Sysout custom function
+
+You can use the sysout function for logging, as shown in the following example:
+
+
+```json
+{
+  "functions": [
+    {
+      "name": "logInfo",
+      "type": "custom",
+      "operation": "sysout:INFO"
+    }
+  ]
+}
+```
+
+
+The string after the : is optional and is used to indicate the log level. The possible values are TRACE, DEBUG, INFO, WARN, and ERROR. If the value is not present, INFO is the default.
+
+In the state definition, you can call the same sysout function as shown in the following example:
+
+
+```json
+{
+  "states": [
+    {
+      "name": "myState",
+      "type": "operation",
+      "actions": [
+        {
+          "name": "printAction",
+          "functionRef": {
+            "refName": "logInfo",
+            "arguments": {
+              "message": "\"Workflow model is \\(.)\""
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+
+In the previous example, the message argument can be a jq expression or a jq string using interpolation.
+
+## Java custom function
+
+OpenShift Serverless Logic supports the java functions within an Apache Maven project, in which you define your workflow service.
+
+The following example shows the declaration of a java function:
+
+
+```json
+{
+  "functions": [
+    {
+      "name": "myFunction", 1
+      "type": "custom", 2
+      "operation": "service:java:com.acme.MyInterfaceOrClass::myMethod" 3
+    }
+  ]
+}
+```
+
+
+myFunction is the function name.
+custom is the function type.
+service:java:com.acme.MyInterfaceOrClass::myMethod is the custom operation definition. In the custom operation definition, service is the reserved operation keyword, followed by the java keyword. com.acme.MyInterfaceOrClass is the FQCN (Fully Qualified Class Name) of the interface or implementation class, followed by the method name myMethod.
+
+## Knative custom function
+
+OpenShift Serverless Logic provides an implementation of a custom function through the knative-serving add-on to invoke Knative services. It allows you to have a static URI, defining a Knative service, that is used to perform HTTP requests. The Knative service defined in the URI is queried in the current Knative cluster and translated to a valid URL.
+
+The following example uses a deployed Knative service:
+
+
+```bash
+$ kn service list
+NAME                              URL                                                                      LATEST                                  AGE     CONDITIONS   READY   REASON
+custom-function-knative-service   http://custom-function-knative-service.default.10.109.169.193.sslip.io   custom-function-knative-service-00001   3h16m   3 OK / 3     True
+```
+
+
+You can declare a OpenShift Serverless Logic custom function using the Knative service name, as shown in the following example:
+
+
+```json
+  "functions": [
+    {
+      "name": "greet", 1
+      "type": "custom", 2
+      "operation": "knative:services.v1.serving.knative.dev/custom-function-knative-service?path=/plainJsonFunction", 3
+    }
+  ]
+```
+
+
+greet is the function name.
+custom is the function type.
+In operation, you set the coordinates of the Knative service.
+
+
+[NOTE]
+----
+This function sends a POST request. If you do not specify a path, OpenShift Serverless Logic uses the root path (/). You can also send GET requests by setting method=GET in the operation. In this case, the arguments are forwarded over a query string.
+----
+
+## REST custom function
+
+OpenShift Serverless Logic offers the REST custom type as a shortcut. When using custom rest, in the function definition, you specify the HTTP URI to be invoked and the HTTP method (get, post, patch, or put) to be used. This is done by using the operation string. When the function is invoked, you pass the request arguments as you do when using an OpenAPI function.
+
+The following example shows the declaration of a rest function:
+
+
+```json
+  {
+  "functions": [
+    {
+      "name": "multiplyAllByAndSum", 1
+      "type": "custom", 2
+      "operation": "rest:post:/numbers/{multiplier}/multiplyByAndSum" 3
+    }
+  ]
+}
+```
+
+
+multiplyAllAndSum is the function name.
+custom is the function type.
+rest:post:/numbers/{multiplier}/multiplyByAndSum is the custom operation definition. In the custom operation definition, rest is the reserved operation keyword that indicates this is a REST call, post is the HTTP method, and /numbers/{multiplier}/multiplyByAndSum is the relative endpoint.
+
+When using the relative endpoints, you must specify the host as a property. The format of the host property is kogito.sw.functions.<function_name>.host. In this example, kogito.sw.functions.multiplyAllByAndSum.host is the host property key. You can override the default port (80) if needed by specifying the kogito.sw.functions.multiplyAllAndSum.port property.
+
+This endpoint expects as body a JSON object whose field numbers is an array of integers, multiplies each item in the array by multiplier and returns the sum of all the multiplied items.
+
+# Timeouts
+
+OpenShift Serverless Logic defines several timeouts configurations that you can use to configure maximum times for the workflow execution in different scenarios. You can configure how long a workflow can wait for an event to arrive when it is in a given state or the maximum execution time for the workflow.
+
+Regardless of where it is defined, a timeout must be configured as an amount of time or duration, which starts when the referred workflow element becomes active. Timeouts use the ISO 8601 data and time standard to specify a duration of time and follow the format PnDTnHnMn.nS, with days considered to be exactly 24 hours. For example, PT15M configures 15 minutes, and P2DT3H4M defines 2 days, 3 hours, and 4 minutes.
+
+
+[NOTE]
+----
+Month-based timeouts like P2M, or period of two months, are not valid since the month duration might vary. In that case, use PT60D instead.
+----
+
+## Workflow timeout
+
+To configure the maximum amount of time that a workflow can be running before being canceled, you can use the workflow timeouts. Once canceled, the workflow is considered to be finished, and is not accessible through a GET request anymore. Therefore, it behaves as if the interrupt was true by default.
+
+Workflow timeouts are defined with the top-level timeouts property. It can have two types, string and object. The string type defines an URI that points to a JSON or YAML file containing the workflow timeout definitions. The object type, is used to define the timeout definitions inline.
+
+For example, to cancel the workflow after an hour of execution, use the following configuration:
+
+
+```json
+  {
+  "id": "workflow_timeouts",
+  "version": "1.0",
+  "name": "Workflow Timeouts",
+  "description": "Simple workflow to show the workflowExecTimeout working",
+  "start": "PrintStartMessage",
+  "timeouts": {
+    "workflowExecTimeout": "PT1H"
+  } ...
+}
+```
+
+
+## Event timeout
+
+When you define a state in a workflow, you can use the timeouts property to configure the maximum time to complete this state. When that time is overdue, the state is considered timed-out, and the engine continues the execution from this state. The execution flow depends on the state type, for instance, a transition to a next state might be executed.
+
+Event-based states can use the sub-property eventTimeout to configure the maximum time to wait for an event to arrive. This is the only property that is supported in current implementation.
+
+Event timeouts support callback state timeout, switch state timeout, and event state timeout.
+
+### Callback state timeout
+
+The Callback state can be used when you must execute an action in general to call an external service, and wait for an asynchronous response in the form of an event.
+
+Once the response event is consumed, the workflow continues the execution, in general moving to the next state defined in the transition property.
+
+Since the Callback state halts the execution until the event is consumed, you can configure an eventTimeout for it, and in case the event does not arrive in the configured time duration, the workflow continues the execution moving to the next state defined in the transition.
+
+
+```json
+{
+ "name": "CallbackState",
+ "type": "callback",
+ "action": {
+   "name": "callbackAction",
+   "functionRef": {
+     "refName": "callbackFunction",
+     "arguments": {
+       "input": "${\"callback-state-timeouts: \" + $WORKFLOW.instanceId + \" has executed the callbackFunction.\"}"
+     }
+   }
+ },
+ "eventRef": "callbackEvent",
+ "transition": "CheckEventArrival",
+ "onErrors": [
+   {
+     "errorRef": "callbackError",
+     "transition": "FinalizeWithError"
+   }
+ ],
+ "timeouts": {
+   "eventTimeout": "PT30S"
+ }
+}
+```
+
+
+### Switch state timeout
+
+You can use the Switch state when you need to take an action depending on certain conditions. These conditions can be based on the workflow data, dataConditions, or on events, eventConditions.
+
+When you use the eventConditions, the workflow execution waits to make a decision until any of the configured events arrives and matches a condition. In this situation, you can configure an event timeout, that controls the maximum time to wait for an event to match the conditions.
+
+If this time expires, the workflow moves to the state defined in the defaultCondition property.
+
+
+```json
+{
+    "name": "ChooseOnEvent",
+    "type": "switch",
+    "eventConditions": [
+    {
+        "eventRef": "visaApprovedEvent",
+        "transition": "ApprovedVisa"
+    },
+    {
+        "eventRef": "visaDeniedEvent",
+        "transition": "DeniedVisa"
+    }
+    ],
+        "defaultCondition": {
+        "transition": "HandleNoVisaDecision"
+    },
+        "timeouts": {
+        "eventTimeout": "PT5S"
+    }
+}
+```
+
+
+### Event state timeout
+
+The Event state is used to wait for one or more events to be received by the workflow, execute a set of actions, and then continue the execution. If the Event state is a starting state, a new workflow instance is created.
+
+The timeouts property is used for this state to configure the maximum time the workflow should wait for the configured events to arrive.
+
+If this time is exceeded and the events are not received, the workflow moves to the state defined in the transition property or ends the workflow instance, in case of an end state, without performing any actions.
+
+
+```json
+{
+  "name": "WaitForEvent",
+  "type": "event",
+  "onEvents": [
+    {
+      "eventRefs": [
+        "event1"
+      ],
+      "eventDataFilter": {
+        "data": "${ \"The event1 was received.\" }",
+        "toStateData": "${ .exitMessage }"
+      },
+      "actions": [
+        {
+          "name": "printAfterEvent1",
+          "functionRef": {
+            "refName": "systemOut",
+            "arguments": {
+              "message": "${\"event-state-timeouts: \" + $WORKFLOW.instanceId + \" executing actions for event1.\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "eventRefs": [
+        "event2"
+      ],
+      "eventDataFilter": {
+        "data": "${ \"The event2 was received.\" }",
+        "toStateData": "${ .exitMessage }"
+      },
+      "actions": [
+        {
+          "name": "printAfterEvent2",
+          "functionRef": {
+            "refName": "systemOut",
+            "arguments": {
+              "message": "${\"event-state-timeouts: \" + $WORKFLOW.instanceId + \" executing actions for event2.\"}"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "timeouts": {
+    "eventTimeout": "PT30S"
+  },
+  "transition": "PrintExitMessage"
+}
+```
+
+
+# Parallelism
+
+OpenShift Serverless Logic serializes the execution of parallel tasks. The word parallel does not indicate simultaneous execution, but it means that there is no logical dependency between the execution of branches. An inactive branch can start or resume the execution of a task without waiting for an active branch to be completed if the active branch suspends its execution. For example, an active branch may suspend its execution while waiting for an event reception.
+
+A parallel state is a state that splits up the current workflow instance execution path into multiple paths, one for each branch. These execution paths are performed in parallel and are joined back into the current execution path depending on the defined completionType parameter value.
+
+
+```json
+ {
+     "name":"ParallelExec",
+     "type":"parallel",
+     "completionType": "allOf",
+     "branches": [
+        {
+          "name": "Branch1",
+          "actions": [
+            {
+                "functionRef": {
+                    "refName": "functionNameOne",
+                    "arguments": {
+                        "order": "${ .someParam }"
+                    }
+                }
+            }
+        ]
+        },
+        {
+          "name": "Branch2",
+          "actions": [
+              {
+                  "functionRef": {
+                      "refName": "functionNameTwo",
+                      "arguments": {
+                          "order": "${ .someParam }"
+                      }
+                  }
+              }
+          ]
+        }
+     ],
+     "end": true
+}
+```
+
+
+
+```yaml
+name: ParallelExec
+type: parallel
+completionType: allOf
+branches:
+- name: Branch1
+  actions:
+  - functionRef:
+      refName: functionNameOne
+      arguments:
+        order: "${ .someParam }"
+- name: Branch2
+  actions:
+  - functionRef:
+      refName: functionNameTwo
+      arguments:
+        order: "${ .someParam }"
+end: true
+```
+
+
+In the previous examples, the allOf defines all branches must complete execution before the state can transition or end. This is the default value if this parameter is not set.

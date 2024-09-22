@@ -1,0 +1,5 @@
+# Configurable fields in func.yaml
+
+You can configure some of the func.yaml fields.
+
+Unresolved directive in serverless-functions-configurable-fields-func-yaml.adoc - include::modules/serverless-functions-func-yaml-fields.adoc[leveloffset=+1]

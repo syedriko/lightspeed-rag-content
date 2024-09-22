@@ -1,0 +1,14 @@
+# Listing event source types from the Developer perspective
+
+It is possible to view a list of all available event source types on your cluster. Using the OpenShift Container Platform web console provides a streamlined and intuitive user interface to view available event source types.
+
+# Viewing available event source types within the Developer perspective
+
+* You have logged in to the OpenShift Container Platform web console.
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+
+1. Access the Developer perspective.
+2. Click +Add.
+3. Click Event Source.
+4. View the available event source types.

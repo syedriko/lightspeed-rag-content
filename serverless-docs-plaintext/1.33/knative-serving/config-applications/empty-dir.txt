@@ -1,0 +1,20 @@
+# EmptyDir volumes
+
+emptyDir volumes are empty volumes that are created when a pod is created, and are used to provide temporary working disk space. emptyDir volumes are deleted when the pod they were created for is deleted.
+
+# Configuring the EmptyDir extension
+
+The kubernetes.podspec-volumes-emptydir extension controls whether emptyDir volumes can be used with Knative Serving. To enable using emptyDir volumes, you must modify the KnativeServing custom resource (CR) to include the following YAML:
+
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+spec:
+  config:
+    features:
+      kubernetes.podspec-volumes-emptydir: enabled
+...
+```

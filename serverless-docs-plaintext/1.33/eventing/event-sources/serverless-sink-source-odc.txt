@@ -1,0 +1,21 @@
+# Connecting an event source to an event sink by using the Developer perspective
+
+When you create an event source by using the OpenShift Container Platform web console, you can specify a target event sink that events are sent to from that source. The event sink can be any addressable or callable resource that can receive incoming events from other resources.
+
+# Connect an event source to an event sink by using the Developer perspective
+
+* The OpenShift Serverless Operator, Knative Serving, and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have logged in to the web console and are in the Developer perspective.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have created an event sink, such as a Knative service, channel or broker.
+
+1. Create an event source of any type, by navigating to +Add -> Event Source and selecting the event source type that you want to create.
+2. In the Target section of the Create Event Source form view, select your event sink. This can be either a Resource or a URI:
+1. Select Resource to use a channel, broker, or service as an event sink for the event source.
+2. Select URI to specify a Uniform Resource Identifier (URI) where the events are routed to.
+3. Click Create.
+
+You can verify that the event source was created and is connected to the sink by viewing the Topology page.
+
+1. In the Developer perspective, navigate to Topology.
+2. View the event source and click the connected event sink to see the sink details in the right panel.

@@ -1,0 +1,87 @@
+# Managing brokers
+
+
+After you have created a broker, you can manage your broker by using Knative (kn) CLI commands, or by modifying it in the OpenShift Container Platform web console.
+
+# Managing brokers using the CLI
+
+The Knative (kn) CLI provides commands that can be used to describe and list existing brokers.
+
+## Listing existing brokers by using the Knative CLI
+
+Using the Knative (kn) CLI to list brokers provides a streamlined and intuitive user interface. You can use the kn broker list command to list existing brokers in your cluster by using the Knative CLI.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have installed the Knative (kn) CLI.
+
+* List all existing brokers:
+
+```terminal
+$ kn broker list
+```
+
+Example output
+
+```terminal
+NAME      URL                                                                     AGE   CONDITIONS   READY   REASON
+default   http://broker-ingress.knative-eventing.svc.cluster.local/test/default   45s   5 OK / 5     True
+```
+
+
+## Describing an existing broker by using the Knative CLI
+
+Using the Knative (kn) CLI to describe brokers provides a streamlined and intuitive user interface. You can use the kn broker describe command to print information about existing brokers in your cluster by using the Knative CLI.
+
+* The OpenShift Serverless Operator and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have installed the Knative (kn) CLI.
+
+* Describe an existing broker:
+
+```terminal
+$ kn broker describe <broker_name>
+```
+
+Example command using default broker
+
+```terminal
+$ kn broker describe default
+```
+
+Example output
+
+```terminal
+Name:         default
+Namespace:    default
+Annotations:  eventing.knative.dev/broker.class=MTChannelBasedBroker, eventing.knative.dev/creato ...
+Age:          22s
+
+Address:
+  URL:    http://broker-ingress.knative-eventing.svc.cluster.local/default/default
+
+Conditions:
+  OK TYPE                   AGE REASON
+  ++ Ready                  22s
+  ++ Addressable            22s
+  ++ FilterReady            22s
+  ++ IngressReady           22s
+  ++ TriggerChannelReady    22s
+```
+
+
+# Connect a broker to a sink using the Developer perspective
+
+You can connect a broker to an event sink in the OpenShift Container Platform Developer perspective by creating a trigger.
+
+* The OpenShift Serverless Operator, Knative Serving, and Knative Eventing are installed on your OpenShift Container Platform cluster.
+* You have logged in to the web console and are in the Developer perspective.
+* You have created a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have created a sink, such as a Knative service or channel.
+* You have created a broker.
+
+1. In the Topology view, point to the broker that you have created. An arrow appears. Drag the arrow to the sink that you want to connect to the broker. This action opens the Add Trigger dialog box.
+2. In the Add Trigger dialog box, enter a name for the trigger and click Add.
+
+You can verify that the broker is connected to the sink by viewing the Topology page.
+
+1. In the Developer perspective, navigate to Topology.
+2. Click the line that connects the broker to the sink to see details about the trigger in the Details panel.

@@ -1,0 +1,37 @@
+# Installing the OpenShift Serverless Logic Operator
+
+
+Installing the OpenShift Serverless Logic Operator enables you to install and use Serverless Workflow on a OpenShift Container Platform cluster. The OpenShift Serverless Logic Operator manages Kubernetes custom resource definitions (CRDs) to configure and deploy the workflows.
+
+# Installing the OpenShift Serverless Logic Operator from the web console
+
+You can install the OpenShift Serverless Logic Operator from OperatorHub by using the OpenShift Container Platform web console.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* For OpenShift Container Platform, your cluster has the Marketplace capability enabled or the Red Hat-provided Operator catalogs source configured manually.
+* You have logged in to the  web console.
+
+1. In the web console, navigate to the Operators -> OperatorHub page.
+2. Scroll, or type the keyword Serverless Logic into the Filter by keyword box to find the OpenShift Serverless Logic Operator.
+3. Review the information about the Operator and click Install.
+4. On the Install Operator page, ensure that the configuration uses the following settings:
+1. The Installation Mode is All namespaces on the cluster (default). This mode installs the Operator in the default openshift-serverless-logic namespace to watch and be made available to all namespaces in the cluster.
+2. The Installed Namespace is openshift-serverless-logic.
+3. Select the stable channel as the Update Channel. The stable channel will enable installation of the latest stable release of the OpenShift Serverless Logic Operator.
+4. Select Automatic or Manual approval strategy.
+5. Click Install to make the Operator available to the selected namespaces on this OpenShift Container Platform cluster.
+6. From the Catalog -> Operator Management page, you can monitor the OpenShift Serverless Logic Operator subscription's installation and upgrade progress.
+* If you selected a Manual approval strategy, the subscription's upgrade status will remain Upgrading until you review and approve its install plan. After approving on the Install Plan page, the subscription upgrade status moves to Up to date.
+* If you selected an Automatic approval strategy, the upgrade status should resolve to Up to date without intervention.
+
+* After the subscription's upgrade status is Up to date, select Catalog -> Installed Operators to verify that the OpenShift Serverless Logic Operator eventually shows up and its Status ultimately resolves to InstallSucceeded in the relevant namespace.
+
+If it does not, check the following items:
+1. Switch to the Catalog -> Operator Management page and inspect the Operator Subscriptions and Install Plans tabs for any failure or errors under Status.
+2. Check the logs in any pods in the openshift-serverless-logic project on the Workloads -> Pods page that are reporting issues to troubleshoot further.
+
+# Additional resources
+
+* Managing resources from custom resource definitions
+* Understanding persistent storage
+* Configuring a custom PKI

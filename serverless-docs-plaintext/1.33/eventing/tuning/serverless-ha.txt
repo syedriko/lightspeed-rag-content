@@ -1,0 +1,94 @@
+# High availability
+
+
+High availability (HA) is a standard feature of Kubernetes APIs that helps to ensure that APIs stay operational if a disruption occurs. In an HA deployment, if an active controller crashes or is deleted, another controller is readily available. This controller takes over processing of the APIs that were being serviced by the controller that is now unavailable.
+HA in OpenShift Serverless is available through leader election, which is enabled by default after the Knative Serving or Eventing control plane is installed. When using a leader election HA pattern, instances of controllers are already scheduled and running inside the cluster before they are required.
+These controller instances compete to use a shared resource, known as the leader election lock. The instance of the controller that has access to the leader election lock resource at any given time is called the leader.
+HA in OpenShift Serverless is available through leader election, which is enabled by default after the Knative Serving or Eventing control plane is installed. When using a leader election HA pattern, instances of controllers are already scheduled and running inside the cluster before they are required.
+These controller instances compete to use a shared resource, known as the leader election lock. The instance of the controller that has access to the leader election lock resource at any given time is called the leader.
+
+# Configuring high availability replicas for Knative Eventing
+
+High availability (HA) is available by default for the Knative Eventing eventing-controller, eventing-webhook, imc-controller, imc-dispatcher, and mt-broker-controller components, which are configured to have two replicas each by default. You can change the number of replicas for these components by modifying the spec.high-availability.replicas value in the KnativeEventing custom resource (CR).
+
+
+[NOTE]
+----
+For Knative Eventing, the mt-broker-filter and mt-broker-ingress deployments are not scaled by HA. If multiple deployments are needed, scale these components manually.
+----
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* The OpenShift Serverless Operator and Knative Eventing are installed on your cluster.
+
+1. In the OpenShift Container Platform web console Administrator perspective, navigate to OperatorHub -> Installed Operators.
+2. Select the knative-eventing namespace.
+3. Click Knative Eventing in the list of Provided APIs for the OpenShift Serverless Operator to go to the Knative Eventing tab.
+4. Click knative-eventing, then go to the YAML tab in the knative-eventing page.
+![Knative Eventing YAML]
+5. Modify the number of replicas in the KnativeEventing CR:
+Example YAML
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+spec:
+  high-availability:
+    replicas: 3
+```
+
+
+# Configuring high availability replicas for the Knative broker implementation for Apache Kafka
+
+High availability (HA) is available by default for the Knative broker implementation for Apache Kafka components kafka-controller and kafka-webhook-eventing, which are configured to have two each replicas by default. You can change the number of replicas for these components by modifying the spec.high-availability.replicas value in the KnativeKafka custom resource (CR).
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* The OpenShift Serverless Operator and Knative broker for Apache Kafka are installed on your cluster.
+
+1. In the OpenShift Container Platform web console Administrator perspective, navigate to OperatorHub -> Installed Operators.
+2. Select the knative-eventing namespace.
+3. Click Knative Kafka in the list of Provided APIs for the OpenShift Serverless Operator to go to the Knative Kafka tab.
+4. Click knative-kafka, then go to the YAML tab in the knative-kafka page.
+![Knative Kafka YAML]
+5. Modify the number of replicas in the KnativeKafka CR:
+Example YAML
+
+```yaml
+apiVersion: operator.serverless.openshift.io/v1alpha1
+kind: KnativeKafka
+metadata:
+  name: knative-kafka
+  namespace: knative-eventing
+spec:
+  high-availability:
+    replicas: 3
+```
+
+
+# Overriding disruption budgets
+
+A Pod Disruption Budget (PDB) is a standard feature of Kubernetes APIs that helps limit the disruption to an application when its pods need to be rescheduled for maintenance reasons.
+
+* Override the default PDB for a specific resource by modifying the minAvailable configuration value in the KnativeEventing custom resource (CR).
+
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+ name: knative-eventing
+ namespace: knative-eventing
+spec:
+ podDisruptionBudgets:
+ - name: eventing-webhook
+   minAvailable: 70%
+```
+
+
+
+[NOTE]
+----
+If you disable high-availability, for example, by changing the high-availability.replicas value to 1, make sure you also update the corresponding PDB minAvailable value to 0. Otherwise, the pod disruption budget prevents automatic cluster or Operator updates.
+----

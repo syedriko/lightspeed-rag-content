@@ -1,0 +1,16 @@
+# About OpenShift Serverless Functions
+
+
+OpenShift Serverless Functions enables developers to create and deploy stateless, event-driven functions as a Knative service on OpenShift Container Platform. The kn func CLI is provided as a plugin for the Knative kn CLI. You can use the kn func CLI to create, build, and deploy the container image as a Knative service on the cluster.
+
+# Included runtimes
+
+OpenShift Serverless Functions provides templates that can be used to create basic functions for the following runtimes:
+
+* Quarkus
+* Node.js
+* TypeScript
+
+# Next steps
+
+* Getting started with functions.

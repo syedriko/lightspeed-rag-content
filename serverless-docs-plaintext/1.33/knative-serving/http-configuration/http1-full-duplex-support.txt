@@ -1,0 +1,26 @@
+# Full duplex support for HTTP/1
+
+You can enable the HTTP/1 full duplex support for a service by configuring the features.knative.dev/http-full-duplex annotation.
+
+
+[NOTE]
+----
+Verify your HTTP clients before enabling, as earlier version clients might not provide support for HTTP/1 full duplex.
+----
+
+The following example shows how you can use this annotation in a Knative Service YAML object at the revision spec level:
+
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: example-service
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        features.knative.dev/http-full-duplex: "Enabled"
+...
+```

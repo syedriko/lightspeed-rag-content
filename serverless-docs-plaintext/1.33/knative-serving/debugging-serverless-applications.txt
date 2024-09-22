@@ -1,0 +1,158 @@
+# Debugging Serverless applications
+
+
+You can use a variety of methods to troubleshoot a Serverless application.
+
+# Checking terminal output
+
+You can check your deploy command output to see whether deployment succeeded or not. If your deployment process was terminated, you should see an error message in the output that describes the reason why the deployment failed. This kind of failure is most likely due to either a misconfigured manifest or an invalid command.
+
+* Open the command output on the client where you deploy and manage your application. The following example is an error that you might see after a failed oc apply command:
+
+```terminal
+Error from server (InternalError): error when applying patch:
+{"metadata":{"annotations":{"kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"serving.knative.dev/v1\",\"kind\":\"Route\",\"metadata\":{\"annotations\":{},\"name\":\"route-example\",\"namespace\":\"default\"},\"spec\":{\"traffic\":[{\"configurationName\":\"configuration-example\",\"percent\":50}]}}\n"}},"spec":{"traffic":[{"configurationName":"configuration-example","percent":50}]}}
+to:
+&{0xc421d98240 0xc421e77490 default route-example STDIN 0xc421db0488 264682 false}
+for: "STDIN": Internal error occurred: admission webhook "webhook.knative.dev" denied the request: mutation failed: The route must have traffic percent sum equal to 100.
+ERROR: Non-zero return code '1' from command: Process exited with status 1
+```
+
+
+This output indicates that you must configure the route traffic percent to be equal to 100.
+
+# Checking pod status
+
+You might need to check the status of your Pod object to identify the issue with your Serverless application.
+
+1. List all pods for your deployment by running the following command:
+
+```terminal
+$ oc get pods
+```
+
+Example output
+
+```terminal
+NAME                                                      READY     STATUS             RESTARTS   AGE
+configuration-example-00001-deployment-659747ff99-9bvr4   2/2       Running            0          3h
+configuration-example-00002-deployment-5f475b7849-gxcht   1/2       CrashLoopBackOff   2          36s
+```
+
+
+In the output, you can see all pods with selected data about their status.
+2. View the detailed information on the status of a pod by running the following command:
+Example output
+
+```terminal
+$ oc get pod <pod_name> --output yaml
+```
+
+
+In the output, the conditions and containerStatuses fields might be particularly useful for debugging.
+
+# Checking revision status
+
+You might need to check the status of your revision to identify the issue with your Serverless application.
+
+1. If you configure your route with a Configuration object, get the name of the Revision object created for your deployment by running the following command:
+
+```terminal
+$ oc get configuration <configuration_name> --output jsonpath="{.status.latestCreatedRevisionName}"
+```
+
+
+You can find the configuration name in the Route.yaml file, which specifies routing settings by defining an OpenShift Route resource.
+
+If you configure your route with revision directly, look up the revision name in the Route.yaml file.
+2. Query for the status of the revision by running the following command:
+
+```terminal
+$ oc get revision <revision-name> --output yaml
+```
+
+
+A ready revision should have the reason: ServiceReady, status: "True", and type: Ready conditions in its status. If these conditions are present, you might want to check pod status or Istio routing. Otherwise, the resource status contains the error message.
+
+## Additional resources
+
+* Route configuration
+
+# Checking Ingress status
+
+You might need to check the status of your Ingress to identify the issue with your Serverless application.
+
+* Check the IP address of your Ingress by running the following command:
+
+```terminal
+$ oc get svc -n istio-system istio-ingressgateway
+```
+
+
+The istio-ingressgateway service is the LoadBalancer service used by Knative.
+
+If there is no external IP address, run the following command:
+
+```terminal
+$ oc describe svc istio-ingressgateway -n istio-system
+```
+
+
+This command prints the reason why IP addresses were not provisioned. Most likely, it is due to a quota issue.
+
+# Checking route status
+
+In some cases, the Route object has issues. You can check its status by using the OpenShift CLI (oc).
+
+* View the status of the Route object with which you deployed your application by running the following command:
+
+```terminal
+$ oc get route <route_name> --output yaml
+```
+
+
+Substitute <route_name> with the name of your Route object.
+
+The conditions object in the status object states the reason in case of a failure.
+
+# Checking Ingress and Istio routing
+
+Sometimes, when Istio is used as an Ingress layer, the Ingress and Istio routing have issues. You can see the details on them by using the OpenShift CLI (oc).
+
+1. List all Ingress resources and their corresponding labels by running the following command:
+
+```terminal
+$ oc get ingresses.networking.internal.knative.dev -o=custom-columns='NAME:.metadata.name,LABELS:.metadata.labels'
+```
+
+Example output
+
+```terminal
+NAME            LABELS
+helloworld-go   map[serving.knative.dev/route:helloworld-go serving.knative.dev/routeNamespace:default serving.knative.dev/service:helloworld-go]
+```
+
+
+In this output, labels serving.knative.dev/route and serving.knative.dev/routeNamespace indicate the Route where the Ingress resource resides. Your Route and Ingress should be listed.
+
+If your Ingress does not exist, the route controller assumes that the Revision objects targeted by your Route or Service object are not ready. Proceed with other debugging procedures to diagnose Revision readiness status.
+2. If your Ingress is listed, examine the ClusterIngress object created for your route by running the following command:
+
+```terminal
+$ oc get ingresses.networking.internal.knative.dev <ingress_name> --output yaml
+```
+
+
+In the status section of the output, if the condition with type=Ready has the status of True, then Ingress is working correctly. Otherwise, the output contains error messages.
+3. If Ingress has the status of Ready, then there is a corresponding VirtualService object. Verify the configuration of the VirtualService object by running the following command:
+
+```terminal
+$ oc get virtualservice -l networking.internal.knative.dev/ingress=<ingress_name> -n <ingress_namespace> --output yaml
+```
+
+
+The network configuration in the VirtualService object must match that of the Ingress and Route objects. Because the VirtualService object does not expose a Status field, you might need to wait for its settings to propagate.
+
+## Additional resources
+
+* Maistra Service Mesh documentation

@@ -1,0 +1,20 @@
+# Uninstalling OpenShift Serverless Knative Eventing
+
+Before you can remove the OpenShift Serverless Operator, you must remove Knative Eventing. To uninstall Knative Eventing, you must remove the KnativeEventing custom resource (CR) and delete the knative-eventing namespace.
+
+# Uninstalling Knative Eventing
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on OpenShift Dedicated.
+* Install the OpenShift CLI (oc).
+
+1. Delete the KnativeEventing CR:
+
+```terminal
+$ oc delete knativeeventings.operator.knative.dev knative-eventing -n knative-eventing
+```
+
+2. After the command has completed and all pods have been removed from the knative-eventing namespace, delete the namespace:
+
+```terminal
+$ oc delete namespace knative-eventing
+```

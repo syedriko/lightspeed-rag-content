@@ -1,0 +1,18 @@
+# Global HTTPS redirection
+
+HTTPS redirection provides redirection for incoming HTTP requests. These redirected HTTP requests are encrypted. You can enable HTTPS redirection for all services on the cluster by configuring the httpProtocol spec for the KnativeServing custom resource (CR).
+
+# HTTPS redirection global settings
+
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+spec:
+  config:
+    network:
+      httpProtocol: "redirected"
+...
+```

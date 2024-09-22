@@ -1,0 +1,23 @@
+# Configuring your function project using the func.yaml file
+
+
+The func.yaml file contains the configuration for your function project. Values specified in func.yaml are used when you execute a kn func command. For example, when you run the kn func build command, the value in the build field is used. In some cases, you can override these values with command line flags or environment variables.
+Unresolved directive in serverless-functions-yaml.adoc - include::modules/serverless-functions-func-yaml-environment-variables.adoc[leveloffset=+1]
+
+# Adding annotations to functions
+
+You can add Kubernetes annotations to a deployed Serverless function. Annotations enable you to attach arbitrary metadata to a function, for example, a note about the function&#8217;s purpose. Annotations are added to the annotations section of the func.yaml configuration file.
+
+There are two limitations of the function annotation feature:
+
+* After a function annotation propagates to the corresponding Knative service on the cluster, it cannot be removed from the service by deleting it from the func.yaml file. You must remove the annotation from the Knative service by modifying the YAML file of the service directly, or by using the OpenShift Container Platform web console.
+* You cannot set annotations that are set by Knative, for example, the autoscaling annotations.
+
+Unresolved directive in serverless-functions-yaml.adoc - include::modules/serverless-functions-adding-annotations.adoc[leveloffset=+1]
+
+# Additional resources
+
+* Getting started with functions
+* Knative documentation on Autoscaling
+* Kubernetes documentation on managing resources for containers
+* Knative documentation on configuring concurrency

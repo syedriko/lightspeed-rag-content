@@ -1,0 +1,292 @@
+# Configuring TLS encryption in Eventing
+
+
+With the transport encryption feature, you can transport data and events over secured and encrypted HTTPS connections by using  Transport Layer Security (TLS).
+
+[IMPORTANT]
+----
+OpenShift Serverless transport encryption for Eventing is a Technology Preview feature only. Technology Preview features
+are not supported with Red Hat production service level agreements (SLAs) and
+might not be functionally complete. Red Hat does not recommend using them
+in production. These features provide early access to upcoming product
+features, enabling customers to test functionality and provide feedback during
+the development process.
+For more information about the support scope of Red Hat Technology Preview features, see Technology Preview Features Support Scope.
+----
+The transport-encryption feature flag is an enum configuration that defines how Addressables, such as Broker, Channel, and Sink, accept events. It controls whether Addressables must accept events over HTTP or HTTPS based on the selected setting.
+The possible values for transport-encryption are as follows:
+
+# Creating a SelfSigned ClusterIssuer resource for Eventing
+
+ClusterIssuers are Kubernetes resources that represent certificate authorities (CAs) that can generate signed certificates by honoring certificate signing requests. All cert-manager certificates require a referenced issuer in a ready condition to attempt to honor the request. For more details, see Issuer.
+
+
+[IMPORTANT]
+----
+For simplicity, this procedure uses a SelfSigned issuer as the root certificate authority. For more details about SelfSigned issuer implications and limitations, see SelfSigned issuers. If you are using a custom public key infrastructure (PKI), you must configure it so its privately signed CA certificates are recognized across the cluster. For more details about cert-manager, see certificate authorities (CAs). You can use any other issuer that is usable for cluster-local services.
+----
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator.
+* You have installed the cert-manager Operator for Red Hat OpenShift.
+* You have installed the OpenShift (oc) CLI.
+
+1. Create a SelfSigned ClusterIssuer resource as follows:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: knative-eventing-selfsigned-issuer
+spec:
+  selfSigned: {}
+```
+
+2. Apply the ClusterIssuer resource by running the following command:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+3. Create a root certificate by using the SelfSigned ClusterIssuer resource as follows:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: knative-eventing-selfsigned-ca
+  namespace: cert-manager 1
+spec:
+  secretName: knative-eventing-ca 2
+  isCA: true
+  commonName: selfsigned-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: knative-eventing-selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+```
+
+Specify the cert-manager Operator for Red Hat OpenShift that is used by default.
+Specify the secret where the certificate is stored. The name is later used by the ClusterIssuer for Eventing.
+4. Apply the Certificate resource by running the following:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+
+# Creating a ClusterIssuer resource for Eventing
+
+ClusterIssuers are Kubernetes resources that represent certificate authorities (CAs) that can generate signed certificates by honoring certificate signing requests.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator.
+* You have installed the cert-manager Operator for Red Hat OpenShift.
+* You have installed the OpenShift (oc) CLI.
+
+1. Create the knative-eventing-ca-issuer ClusterIssuer resource as follows:
+
+Every Eventing component uses this issuer to issue their server&#8217;s certs.
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: knative-eventing-ca-issuer
+spec:
+  ca:
+    secretName: knative-eventing-ca 1
+```
+
+The secretName value in the cert-manager namespace (default for cert-manager Operator for Red Hat OpenShift) contains the certificate that can be used by Knative Eventing components.
+
+[NOTE]
+----
+The ClusterIssuer name must be knative-eventing-ca-issuer.
+----
+2. Apply the ClusterIssuer resource by running the following command:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+
+# Enabling transport encrption for Knative Eventing
+
+You can enable transport encryption in KnativeEventing by setting the transport-encryption feature to strict.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator.
+* You have installed the cert-manager Operator for Red Hat OpenShift.
+* You have installed the OpenShift (oc) CLI.
+
+1. Enable the transport-encryption in KnativeEventing as follows:
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+spec:
+
+  # Other spec fields omitted ...
+  # ...
+
+  config:
+    features:
+      transport-encryption: strict
+```
+
+2. Apply the KnativeEventing resource by running the following command:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+
+# Configuring additional CA trust bundles
+
+By default, Eventing clients trust the OpenShift CA bundle configured for custom PKI. For more details, see Configuring a custom PKI.
+
+
+[NOTE]
+----
+When a new connection is established, Eventing clients automatically include these CA bundles in their trusted list.
+----
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator.
+* You have installed the cert-manager Operator for Red Hat OpenShift.
+
+* Create a CA bundle for Eventing as follows:
+
+```yaml
+kind: ConfigMap
+metadata:
+  name: <my_org_eventing_bundle> 1
+  namespace: knative-eventing
+  labels:
+    networking.knative.dev/trust-bundle: "true"
+data: 2
+  ca.crt: ...
+  ca1.crt: ...
+  tls.crt: ...
+```
+
+Use a unique name to avoid conflicts with existing or future Eventing config maps.
+All keys with valid PEM-encoded CA bundles are trusted by Eventing clients.
+
+# Configure custom event sources to trust the Eventing CA
+
+To create a custom event source, use a SinkBinding. The SinkBinding can inject the configured CA trust bundles as a projected volume into each container by using the knative-custom-certs directory.
+
+In specific cases, you might inject company-specific CA trust bundles into base container images and automatically configure runtimes, such as OpenJDK or Node.js, and so on. to trust those CA bundles. In such cases, you might not need to configure your clients.
+
+By using the my_org_eventing_bundle config map from the previous example, with the ca.crt, ca1.crt, and tls.crt data keys, the knative-custom-certs directory has the following layout:
+
+
+```terminal
+/knative-custom-certs/ca.crt
+/knative-custom-certs/ca1.crt
+/knative-custom-certs/tls.crt
+```
+
+
+You can use these files to add CA trust bundles to HTTP clients that send events to Eventing.
+
+
+[NOTE]
+----
+Depending on the runtime, programming language, or library you use, different methods exist for configuring custom CA cert files, such as using command-line flags, environment variables, or reading the content of the files.
+----
+
+# Adding a SelfSigned ClusterIssuer resource to CA trust bundles
+
+If you are using a SelfSigned ClusterIssuer resource, you can add the CA to the Eventing CA trust bundles.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator.
+* You have installed the cert-manager Operator for Red Hat OpenShift.
+* You have installed the OpenShift (oc) CLI.
+
+1. Export the CA from the knative-eventing-ca secret in the cert-manager Operator for Red Hat OpenShift namespace (default is cert-manager certificate) by running the following command:
+
+```terminal
+$ oc get secret -n cert-manager knative-eventing-ca -o=jsonpath='{.data.ca\.crt}' | base64 -d > ca.crt
+```
+
+2. Create a CA trust bundle in the knative-eventing namespace by running the following command:
+
+```terminal
+$ oc create configmap -n knative-eventing my-org-selfsigned-ca-bundle --from-file=ca.crt
+```
+
+3. Label the ConfigMap by running the following command:
+
+```terminal
+$ oc label configmap -n knative-eventing my-org-selfsigned-ca-bundle networking.knative.dev/trust-bundle=true
+```
+
+
+# Ensuring seamless CA rotation
+
+Ensuring seamless CA rotation is essential to avoid service downtime or to handle emergencies.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator.
+* You have installed the cert-manager Operator for Red Hat OpenShift.
+* You have installed the OpenShift (oc) CLI.
+
+1. Create a CA certificate.
+2. Add the public key of the new CA certificate to the CA trust bundles.
+
+Ensure that you also keep the public key of the existing CA.
+3. Ensure all clients use the latest CA trust bundles.
+
+Knative Eventing components automatically reload the updated CA trust bundles. For custom workloads that consume trust bundles, reload or restart them as needed.
+4. Update the knative-eventing-ca-issuer ClusterIssuer to reference the secret containing the CA certificate that you created in step 1.
+5. Force cert-manager to renew certificates in the knative-eventing namespace.
+
+For more information about cert-manager, see Reissuance triggered by user actions.
+6. As soon as the CA rotation is fully completed, remove the public key of the old CA from the trust bundle config map.
+
+# Verifying transport encryption in Eventing
+
+To confirm that transport encryption is correctly configured, you can create and test an InMemoryChannel resource. Follow the steps to ensure that it uses HTTPS as expected.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator.
+* You have installed the cert-manager Operator for Red Hat OpenShift.
+* You have installed the OpenShift (oc) CLI.
+
+1. Create an InMemoryChannel resource as follows:
+
+```yaml
+apiVersion: messaging.knative.dev/v1
+kind: InMemoryChannel
+metadata:
+  name: transport-encryption-test
+```
+
+2. Apply the InMemoryChannel resource by running the following command:
+
+```terminal
+$ oc apply -f <filename>
+```
+
+3. View the InMemoryChannel address by running the following command:
+
+```terminal
+$ oc get inmemorychannels.messaging.knative.dev transport-encryption-test
+```
+
+Example output
+
+```terminal
+NAME                        URL                                                                                           AGE   READY   REASON
+transport-encryption-test   https://imc-dispatcher.knative-eventing.svc.cluster.local/default/transport-encryption-test   17s   True
+```

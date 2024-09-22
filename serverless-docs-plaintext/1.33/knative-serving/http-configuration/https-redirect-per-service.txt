@@ -1,0 +1,20 @@
+# HTTPS redirection per service
+
+You can enable or disable HTTPS redirection for a service by configuring the networking.knative.dev/http-option annotation.
+
+# Redirecting HTTPS for a service
+
+The following example shows how you can use this annotation in a Knative Service YAML object:
+
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: example
+  namespace: default
+  annotations:
+    networking.knative.dev/http-protocol: "redirected"
+spec:
+  ...
+```

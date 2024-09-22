@@ -1,0 +1,42 @@
+# Examining metrics of a service
+
+After you have configured the application to export the metrics and the monitoring stack to scrape them, you can examine the metrics in the web console.
+* You have logged in to the OpenShift Container Platform web console.
+* You have installed the OpenShift Serverless Operator and Knative Serving.
+1. Optional: Run requests against your application that you will be able to see in the metrics:
+
+```terminal
+$ hello_route=$(oc get ksvc helloworld-go -n ns1 -o jsonpath='{.status.url}') && \
+    curl $hello_route
+```
+
+Example output
+
+```terminal
+Hello Go Sample v1!
+```
+
+2. In the web console, navigate to the Observe -> Metrics interface.
+3. In the input field, enter the query for the metric you want to observe, for example:
+
+```
+revision_app_request_count{namespace="ns1", job="helloworld-go-sm"}
+```
+
+
+Another example:
+
+```
+myapp_processed_ops_total{namespace="ns1", job="helloworld-go-sm"}
+```
+
+4. Observe the visualized metrics:
+![Observing metrics of a service]
+![Observing metrics of a service]
+
+# Queue proxy metrics
+
+Each Knative service has a proxy container that proxies the connections to the application container. A number of metrics are reported for the queue proxy performance.
+
+You can use the following metrics to measure if requests are queued at the proxy side and the actual delay in serving requests at the application side.
+

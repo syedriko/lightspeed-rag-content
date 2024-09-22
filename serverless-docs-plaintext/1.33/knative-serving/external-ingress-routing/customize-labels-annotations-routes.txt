@@ -1,0 +1,50 @@
+# Customizing labels and annotations
+
+
+OpenShift Container Platform routes support the use of custom labels and annotations, which you can configure by modifying the metadata spec of a Knative service. Custom labels and annotations are propagated from the service to the Knative route, then to the Knative ingress, and finally to the OpenShift Container Platform route.
+
+# Customizing labels and annotations for OpenShift Container Platform routes
+
+* You must have the OpenShift Serverless Operator and Knative Serving installed on your OpenShift Container Platform cluster.
+* Install the OpenShift CLI (oc).
+
+1. Create a Knative service that contains the label or annotation that you want to propagate to the OpenShift Container Platform route:
+* To create a service by using YAML:
+Example service created by using YAML
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: <service_name>
+  labels:
+    <label_name>: <label_value>
+  annotations:
+    <annotation_name>: <annotation_value>
+...
+```
+
+* To create a service by using the Knative (kn) CLI, enter:
+Example service created by using a kn command
+
+```terminal
+$ kn service create <service_name> \
+  --image=<image> \
+  --annotation <annotation_name>=<annotation_value> \
+  --label <label_value>=<label_value>
+```
+
+2. Verify that the OpenShift Container Platform route has been created with the annotation or label that you added by inspecting the output from the following command:
+Example command for verification
+
+```terminal
+$ oc get routes.route.openshift.io \
+     -l serving.knative.openshift.io/ingressName=<service_name> \ 1
+     -l serving.knative.openshift.io/ingressNamespace=<service_namespace> \ 2
+     -n knative-serving-ingress -o yaml \
+         | grep -e "<label_name>: \"<label_value>\""  -e "<annotation_name>: <annotation_value>" 3
+```
+
+Use the name of your service.
+Use the namespace where your service was created.
+Use your values for the label and annotation names and values.

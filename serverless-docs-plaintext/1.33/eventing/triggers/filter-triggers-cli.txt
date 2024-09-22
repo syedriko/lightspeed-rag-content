@@ -1,0 +1,23 @@
+# Filtering triggers from the command line
+
+Using the Knative (kn) CLI to filter events by using triggers provides a streamlined and intuitive user interface. You can use the kn trigger create command, along with the appropriate flags, to filter events by using triggers.
+
+# Filtering events with triggers by using the Knative CLI
+
+In the following trigger example, only events with the attribute type: dev.knative.samples.helloworld are sent to the event sink:
+
+
+```terminal
+$ kn trigger create <trigger_name> --broker <broker_name> --filter type=dev.knative.samples.helloworld --sink ksvc:<service_name>
+```
+
+
+You can also filter events by using multiple attributes. The following example shows how to filter events using the type, source, and extension attributes:
+
+
+```terminal
+$ kn trigger create <trigger_name> --broker <broker_name> --sink ksvc:<service_name> \
+--filter type=dev.knative.samples.helloworld \
+--filter source=dev.knative.samples/helloworldsource \
+--filter myextension=my-extension-value
+```

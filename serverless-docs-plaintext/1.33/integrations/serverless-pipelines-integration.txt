@@ -1,0 +1,38 @@
+# Integrating Serverless with OpenShift Pipelines
+
+
+Integrating Serverless with OpenShift Pipelines enables CI/CD pipeline management for Serverless services. Using this integration, you can automate the deployment of your Serverless services.
+
+# Prerequisites
+
+* You have access to the cluster with cluster-admin privileges.
+* The OpenShift Serverless Operator and Knative Serving are installed on the cluster.
+* You have installed the OpenShift Pipelines Operator on the cluster.
+
+# Creating a service deployed by OpenShift Pipelines
+
+Using the OpenShift Container Platform web console, you can create a service that the OpenShift Pipelines deploys.
+
+1. In the OpenShift Container Platform web console Developer perspective, navigate to +Add and select the Import from Git option.
+![Importing from Git]
+2. In the Import from Git dialog, specify project metadata by doing the following:
+* Specify the Git repository URL.
+* If necessary, specify the context directory. This is the subdirectory inside the repository that contains the root of application source code.
+* Optional: Specify the application name. By default, the repository name is used.
+* Select the Serverless Deployment resource type.
+* Select the Add pipeline checkbox. The pipeline is automatically selected based on the source code and its visualization is shown on the scheme.
+* Specify any other relevant settings.
+![Importing from Git dialog]
+3. Click Create to create the service.
+4. After the service creation starts, you are navigated to the Topology screen, where your service and the related trigger are visualized and where you can interact with them.
+![Topology]
+5. Optional: Verify that the pipeline has been created and that the service is being built and deployed by navigating to the Pipelines page:
+![Pipelines screen]
+6. To see the details of the pipeline, click the pipeline on the Pipelines page.
+![Pipeline details screen]
+7. To see the details about the current pipeline run, click the name of the run on the Pipelines page.
+![PipelineRun details screen]
+
+# Additional resources
+
+* Documentation for Red Hat OpenShift Pipelines

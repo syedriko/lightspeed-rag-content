@@ -1,0 +1,84 @@
+# Creating functions
+
+
+Before you can build and deploy a function, you must create it. You can create functions using the Knative (kn) CLI.
+
+# Creating a function by using the Knative CLI
+
+You can specify the path, runtime, template, and image registry for a function as flags on the command line, or use the -c flag to start the interactive experience in the terminal.
+
+* The OpenShift Serverless Operator and Knative Serving are installed on the cluster.
+* You have installed the Knative (kn) CLI.
+
+* Create a function project:
+
+```terminal
+$ kn func create -r <repository> -l <runtime> -t <template> <path>
+```
+
+* Accepted runtime values include quarkus, node, typescript, go, python, springboot, and rust.
+* Accepted template values include http and cloudevents.
+Example command
+
+```terminal
+$ kn func create -l typescript -t cloudevents examplefunc
+```
+
+Example output
+
+```terminal
+Created typescript function in /home/user/demo/examplefunc
+```
+
+* Alternatively, you can specify a repository that contains a custom template.
+Example command
+
+```terminal
+$ kn func create -r https://github.com/boson-project/templates/ -l node -t hello-world examplefunc
+```
+
+Example output
+
+```terminal
+Created node function in /home/user/demo/examplefunc
+```
+
+
+# Creating a function in the web console
+
+You can create a function from a Git repository by using the Developer perspective of the OpenShift Container Platform web console.
+
+* Before you can create a function by using the web console, a cluster administrator must complete the following steps:
+* Install the OpenShift Serverless Operator and Knative Serving on the cluster.
+* Install the OpenShift Pipelines Operator on the cluster.
+* Create the following pipeline tasks so that they are available for all namespaces on the cluster:
+func-s2i task
+
+```terminal
+$ oc apply -f https://raw.githubusercontent.com/openshift-knative/kn-plugin-func/serverless-1.33/pkg/pipelines/resources/tekton/task/func-s2i/0.1/func-s2i.yaml
+```
+
+func-deploy task
+
+```terminal
+$ oc apply -f https://raw.githubusercontent.com/openshift-knative/kn-plugin-func/serverless-1.33/pkg/pipelines/resources/tekton/task/func-deploy/0.1/func-deploy.yaml
+```
+
+Node.js function
+
+```terminal
+$ oc apply -f https://raw.githubusercontent.com/openshift-knative/kn-plugin-func/serverless-1.33/pkg/pipelines/resources/tekton/pipeline/dev-console/0.1/nodejs-pipeline.yaml
+```
+
+* You must log into the OpenShift Container Platform web console.
+* You must create a project or have access to a project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You must create or have access to a Git repository that contains the code for your function. The repository must contain a func.yaml file and use the s2i build strategy.
+
+1. In the Developer perspective, navigate to +Add → Create Serverless function. The Create Serverless function page is displayed.
+2. Enter a Git Repo URL that points to the Git repository that contains the code for your function.
+3. In the Pipelines section:
+1. Select the Build, deploy and configure a Pipeline Repository radio button to create a new pipeline for your function.
+2. Select the Use Pipeline from this cluster radio button to connect your function to an existing pipeline in the cluster.
+4. Click Create.
+
+* After you have created a function, you can view it in the Topology view of the Developer perspective.

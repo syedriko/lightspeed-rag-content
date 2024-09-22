@@ -18,7 +18,7 @@ from llama_index.core.storage.storage_context import StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.faiss import FaissVectorStore
 
-OCP_DOCS_ROOT_URL = "https://docs.openshift.com/container-platform/"
+OCP_DOCS_ROOT_URL = "https://docs.openshift.com/serverless/"
 OCP_DOCS_VERSION = "4.15"
 UNREACHABLE_DOCS: int = 0
 RUNBOOKS_ROOT_URL = "https://github.com/openshift/runbooks/blob/master/alerts"
@@ -145,9 +145,10 @@ if __name__ == "__main__":
     EMBEDDINGS_ROOT_DIR = os.path.abspath(args.folder)
     if EMBEDDINGS_ROOT_DIR.endswith("/"):
         EMBEDDINGS_ROOT_DIR = EMBEDDINGS_ROOT_DIR[:-1]
-    RUNBOOKS_ROOT_DIR = os.path.abspath(args.runbooks)
-    if RUNBOOKS_ROOT_DIR.endswith("/"):
-        RUNBOOKS_ROOT_DIR = RUNBOOKS_ROOT_DIR[:-1]
+    if args.runbooks:
+        RUNBOOKS_ROOT_DIR = os.path.abspath(args.runbooks)
+        if RUNBOOKS_ROOT_DIR.endswith("/"):
+            RUNBOOKS_ROOT_DIR = RUNBOOKS_ROOT_DIR[:-1]
 
     OCP_DOCS_VERSION = args.ocp_version
     HERMETIC_BUILD = args.hermetic_build
@@ -187,16 +188,16 @@ if __name__ == "__main__":
         else:
             print("skipping node without whitespace: " + node.__repr__())
 
-    runbook_documents = SimpleDirectoryReader(
-        args.runbooks,
-        recursive=True,
-        required_exts=[".md"],
-        file_extractor={".md": FlatReader()},
-        file_metadata=runbook_file_metadata_func,
-    ).load_data()
-    runbook_nodes = Settings.text_splitter.get_nodes_from_documents(runbook_documents)
-
-    good_nodes.extend(runbook_nodes)
+    if args.runbooks:
+        runbook_documents = SimpleDirectoryReader(
+            args.runbooks,
+            recursive=True,
+            required_exts=[".md"],
+            file_extractor={".md": FlatReader()},
+            file_metadata=runbook_file_metadata_func,
+        ).load_data()
+        runbook_nodes = Settings.text_splitter.get_nodes_from_documents(runbook_documents)
+        good_nodes.extend(runbook_nodes)
 
     # Create & save Index
     index = VectorStoreIndex(

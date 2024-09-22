@@ -1,0 +1,27 @@
+# Knative Serving metrics
+
+
+Cluster administrators can view the following metrics for Knative Serving components.
+
+# Activator metrics
+
+You can use the following metrics to understand how applications respond when traffic passes through the activator.
+
+
+
+# Autoscaler metrics
+
+The autoscaler component exposes a number of metrics related to autoscaler behavior for each revision. For example, at any given time, you can monitor the targeted number of pods the autoscaler tries to allocate for a service, the average number of requests per second during the stable window, or whether the autoscaler is in panic mode if you are using the Knative pod autoscaler (KPA).
+
+
+
+# Go runtime metrics
+
+Each Knative Serving control plane process emits a number of Go runtime memory statistics (MemStats).
+
+
+[NOTE]
+----
+The name tag for each metric is an empty tag.
+----
+

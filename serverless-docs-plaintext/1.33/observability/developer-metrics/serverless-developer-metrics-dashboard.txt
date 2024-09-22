@@ -1,0 +1,14 @@
+# Dashboard for service metrics
+
+You can examine the metrics using a dedicated dashboard that aggregates queue proxy metrics by namespace.
+
+# Examining metrics of a service in the dashboard
+
+* You have logged in to the OpenShift Container Platform web console.
+* You have installed the OpenShift Serverless Operator and Knative Serving.
+
+1. In the web console, navigate to the Observe -> Metrics interface.
+2. Select the Knative User Services (Queue Proxy metrics) dashboard.
+3. Select the Namespace, Configuration, and Revision that correspond to your application.
+4. Observe the visualized metrics:
+![Observing metrics of a service using a dashboard]

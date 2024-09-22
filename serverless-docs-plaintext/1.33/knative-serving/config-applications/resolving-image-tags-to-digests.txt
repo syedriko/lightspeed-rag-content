@@ -1,0 +1,38 @@
+# Resolving image tags to digests
+
+If the Knative Serving controller has access to the container registry, Knative Serving resolves image tags to a digest when you create a revision of a service. This is known as tag-to-digest resolution, and helps to provide consistency for deployments.
+
+# Tag-to-digest resolution
+
+To give the controller access to the container registry on OpenShift Container Platform, you must create a secret and then configure controller custom certificates. You can configure controller custom certificates by modifying the controller-custom-certs spec in the KnativeServing custom resource (CR). The secret must reside in the same namespace as the KnativeServing CR.
+
+If a secret is not included in the KnativeServing CR, this setting defaults to using public key infrastructure (PKI). When using PKI, the cluster-wide certificates are automatically injected into the Knative Serving controller by using the config-service-sa config map. The OpenShift Serverless Operator populates the config-service-sa config map with cluster-wide certificates and mounts the config map as a volume to the controller.
+
+## Configuring tag-to-digest resolution by using a secret
+
+If the controller-custom-certs spec uses the Secret type, the secret is mounted as a secret volume. Knative components consume the secret directly, assuming that the secret has the required certificates.
+
+* You have cluster administrator permissions on OpenShift Container Platform, or you have cluster or dedicated administrator permissions on Red Hat OpenShift Service on AWS or OpenShift Dedicated.
+* You have installed the OpenShift Serverless Operator and Knative Serving on your cluster.
+
+1. Create a secret:
+Example command
+
+```yaml
+$ oc -n knative-serving create secret generic custom-secret --from-file=<secret_name>.crt=<path_to_certificate>
+```
+
+2. Configure the controller-custom-certs spec in the KnativeServing custom resource (CR) to use the Secret type:
+Example KnativeServing CR
+
+```yaml
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec:
+  controller-custom-certs:
+    name: custom-secret
+    type: Secret
+```

@@ -1,0 +1,128 @@
+# Building and deploying functions on the cluster
+
+
+Instead of building a function locally, you can build a function directly on the cluster. When using this workflow on a local development machine, you only need to work with the function source code. This is useful, for example, when you cannot install on-cluster function building tools, such as docker or podman.
+
+# Building and deploying a function on the cluster
+
+You can use the Knative (kn) CLI to initiate a function project build and then deploy the function directly on the cluster. To build a function project in this way, the source code for your function project must exist in a Git repository branch that is accessible to your cluster.
+
+* Red Hat OpenShift Pipelines must be installed on your cluster.
+* You have installed the OpenShift CLI (oc).
+* You have installed the Knative (kn) CLI.
+
+1. Create a function:
+
+```terminal
+$ kn func create <function_name> -l <runtime>
+```
+
+2. Implement the business logic of your function. Then, use Git to commit and push the changes.
+3. Deploy your function:
+
+```terminal
+$ kn func deploy --remote
+```
+
+
+If you are not logged into the container registry referenced in your function configuration, you are prompted to provide credentials for the remote container registry that hosts the function image:
+Example output and prompts
+
+```terminal
+🕕 Creating Pipeline resources
+Please provide credentials for image registry used by Pipeline.
+? Server: https://index.docker.io/v1/
+? Username: my-repo
+? Password: ********
+   Function deployed at URL: http://test-function.default.svc.cluster.local
+```
+
+4. To update your function, commit and push new changes by using Git, then run the kn func deploy --remote command again.
+5. Optional. You can configure your function to be built on the cluster after every Git push by using pipelines-as-code:
+1. Generate the Tekton Pipelines and PipelineRuns configuration for your function:
+
+```terminal
+$ kn func config git set
+```
+
+
+Apart from generating configuration files, this command connects to the cluster and validates that the pipeline is installed. By using the token, it also creates, on behalf of the user, a webhook on the function repository. That webhook triggers the pipeline on the cluster every time changes are pushed to the repository.
+
+You need to have a valid GitHub personal access token with the repository access to use this command.
+2. Commit and push the generated .tekton/pipeline.yaml and .tekton/pipeline-run.yaml files:
+
+```terminal
+$ git add .tekton/pipeline.yaml .tekton/pipeline-run.yaml
+$ git commit -m 'Add the Pipelines and PipelineRuns configuration'
+$ git push
+```
+
+3. After you make a change to your function, commit and push it. The function is rebuilt automatically by using the created pipeline.
+
+# Specifying function revision
+
+When building and deploying a function on the cluster, you must specify the location of the function code by specifying the Git repository, branch, and subdirectory within the repository. You do not need to specify the branch if you use the main branch. Similarly, you do not need to specify the subdirectory if your function is at the root of the repository. You can specify these parameters in the func.yaml configuration file, or by using flags with the kn func deploy command.
+
+* Red Hat OpenShift Pipelines must be installed on your cluster.
+* You have installed the OpenShift (oc) CLI.
+* You have installed the Knative (kn) CLI.
+
+* Deploy your function:
+
+```terminal
+$ kn func deploy --remote \ 1
+                 --git-url <repo-url> \ 2
+                 [--git-branch <branch>] \ 3
+                 [--git-dir <function-dir>] 4
+```
+
+With the --remote flag, the build runs remotely.
+Substitute <repo-url> with the URL of the Git repository.
+Substitute <branch> with the Git branch, tag, or commit. If using the latest commit on the main branch, you can skip this flag.
+Substitute <function-dir> with the directory containing the function if it is different than the repository root directory.
+
+For example:
+
+```terminal
+$ kn func deploy --remote \
+                 --git-url https://example.com/alice/myfunc.git \
+                 --git-branch my-feature \
+                 --git-dir functions/example-func/
+```
+
+
+# Setting custom volume size
+
+For projects that require a volume with a larger size to build, you might need to customize the persistent volume claim (PVC) when building on the cluster. The default PVC size is 256 mebibytes.
+
+* Red Hat OpenShift Pipelines must be installed on your cluster.
+* You have installed the OpenShift (oc) CLI.
+* You have installed the Knative (kn) CLI.
+
+* Deploy your function with the --pvc-size flag and PVC size specification by running the following command:
+
+```terminal
+$ kn func deploy --remote --pvc-size='2Gi'
+```
+
+
+In this example, PVC is set to two gibibytes.
+
+# Testing a function in the web console
+
+You can test a deployed serverless function by invoking it in the Developer perspective of the {product-title} web console.
+
+* The OpenShift Serverless Operator and Knative Serving are installed on your {product-title} cluster.
+* You have logged in to the web console and are in the Developer perspective.
+* You have created and deployed a function.
+
+1. In the Developer perspective, navigate to Topology.
+2. Click on a function, then click Test Serverless Function from the Actions drop-down list in the Details panel. This opens the Test Serverless Function dialog box.
+3. In the Test Serverless Function dialog box, modify the settings for your test as required:
+1. Choose the Format for your test. This can be either CloudEvent or HTTP.
+2. The Content-Type defaults to the Content-Type HTTP header value.
+3. You can use the Advanced Settings to modify the Type or Source for CloudEvent tests, or to add optional headers.
+4. You can modify the input data for the test.
+4. Click Test to run your test.
+5. After the test is complete, the Test Serverless Function dialog box displays a status code and a message that informs you whether your test was succesful.
+6. Click Back to perform another test, or Close to close the testing dialog box.

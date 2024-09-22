@@ -1,0 +1,5 @@
+# Listing event sources and event source types
+
+
+
+It is possible to view a list of all event sources or event source types that exist or are available for use on your OpenShift Container Platform cluster. You can use the Knative (kn) CLI or the Developer perspective in the OpenShift Container Platform web console to list available event sources or event source types.

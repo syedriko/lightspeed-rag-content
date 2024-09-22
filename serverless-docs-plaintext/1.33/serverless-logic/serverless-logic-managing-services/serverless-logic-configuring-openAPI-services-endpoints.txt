@@ -1,0 +1,145 @@
+# Configuring OpenAPI services endpoints
+
+
+OpenShift Serverless Logic uses the kogito.sw.operationIdStrategy property to generate the REST client for invoking services defined in OpenAPI documents. This property determines how the configuration key is derived for the REST client configuration.
+The kogito.sw.operationIdStrategy property supports the following values: FILE_NAME, FULL_URI, FUNCTION_NAME, and SPEC_TITLE.
+FILE_NAME:: OpenShift Serverless Logic uses the OpenAPI document file name to create the configuration key. The key is based on the file name, where special characters are replaced with underscores.
+Example configuration:
+
+```sh
+quarkus.rest-client.stock_portfolio_svc_yaml.url=http://localhost:8282/ 1
+```
+
+The OpenAPI File Path is src/main/resources/openapi/stock-portfolio-svc.yaml. The generated key that configures the URL for the REST client is stock_portfolio_svc_yaml
+FULL_URI:: OpenShift Serverless Logic uses the complete URI path of the OpenAPI document as the configuration key. The full URI is sanitized to form the key.
+Example for Serverless Workflow
+
+```json
+{
+    "id": "myworkflow",
+    "functions": [
+        {
+          "name": "myfunction",
+          "operation": "https://my.remote.host/apicatalog/apis/123/document"
+        }
+    ]
+    ...
+}
+```
+
+Example configuration:
+
+```sh
+quarkus.rest-client.apicatalog_apis_123_document.url=http://localhost:8282/ 1
+```
+
+The URI path is https://my.remote.host/apicatalog/apis/123/document. The generated key that configures the URL for the REST client is apicatalog_apis_123_document.
+FUNCTION_NAME:: OpenShift Serverless Logic combines the workflow ID and the function name referencing the OpenAPI document to generate the configuration key.
+Example for Serverless Workflow
+
+```json
+{
+    "id": "myworkflow",
+    "functions": [
+        {
+          "name": "myfunction",
+          "operation": "https://my.remote.host/apicatalog/apis/123/document"
+        }
+    ]
+    ...
+}
+```
+
+Example configuration:
+
+```sh
+quarkus.rest-client.myworkflow_myfunction.url=http://localhost:8282/ 1
+```
+
+The workflow ID is myworkflow. The function name is myfunction. The generated key that configures the URL for the REST client is myworkflow_myfunction.
+SPEC_TITLE:: OpenShift Serverless Logic uses the info.title value from the OpenAPI document to create the configuration key. The title is sanitized to form the key.
+Example for OpenAPI document
+
+```yaml
+openapi: 3.0.3
+info:
+  title: stock-service API
+  version: 2.0.0-SNAPSHOT
+paths:
+  /stock-price/{symbol}:
+...
+```
+
+Example configuration:
+
+```sh
+quarkus.rest-client.stock-service_API.url=http://localhost:8282/ 1
+```
+
+The OpenAPI document title is stock-service API. The generated key that configures the URL for the REST client is stock-service_API.
+
+# Using URI alias
+
+As an alternative to the kogito.sw.operationIdStrategy property, you can assign an alias to a URI by using the workflow-uri-definitions custom extension. This alias simplifies the configuration process and can be used as a configuration key in REST client settings and function definitions.
+
+The workflow-uri-definitions extension allows you to map a URI to an alias, which you can reference throughout the workflow and in your configuration files. This approach provides a centralized way to manage URIs and their configurations.
+
+* You have access to a OpenShift Serverless Logic project with the appropriate roles and permissions to create applications and other workloads in OpenShift Container Platform.
+* You have access to the OpenAPI specification files.
+
+1. Add the workflow-uri-definitions extension to your workflow. Within this extension, create aliases for your URIs.
+Example workflow
+
+```json
+{
+  "extensions": [
+    {
+      "extensionid": "workflow-uri-definitions", 1
+      "definitions": {
+        "remoteCatalog": "https://my.remote.host/apicatalog/apis/123/document" 2
+      }
+    }
+  ],
+  "functions": [ 3
+    {
+      "name": "operation1",
+      "operation": "remoteCatalog#operation1"
+    },
+    {
+      "name": "operation2",
+      "operation": "remoteCatalog#operation2"
+    }
+  ]
+}
+```
+
+
+Set the extension ID to workflow-uri-definitions.
+Set the alias definition by mapping the remoteCatalog alias to a URI, for example, https://my.remote.host/apicatalog/apis/123/document URI.
+Set the function operations by using the remoteCatalog alias with the operation identifiers, for example,  operation1 and operation2 operation identifiers.
+1. In the application.properties file, configure the REST client by using the alias defined in the workflow.
+Example property
+
+```sh
+quarkus.rest-client.remoteCatalog.url=http://localhost:8282/
+```
+
+
+In the previous example, the configuration key is set to quarkus.rest-client.remoteCatalog.url, and the URL is set to http://localhost:8282/, which the REST clients use by referring to the remoteCatalog alias.
+2. In your workflow, use the alias when defining functions that operate on the URI.
+Example Workflow (continued):
+
+```json
+{
+  "functions": [
+    {
+      "name": "operation1",
+      "operation": "remoteCatalog#operation1"
+    },
+    {
+      "name": "operation2",
+      "operation": "remoteCatalog#operation2"
+    }
+  ]
+}
+```
