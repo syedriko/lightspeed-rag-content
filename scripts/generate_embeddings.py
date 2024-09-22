@@ -18,7 +18,7 @@ from llama_index.core.storage.storage_context import StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.faiss import FaissVectorStore
 
-OCP_DOCS_ROOT_URL = "https://docs.openshift.com/container-platform/"
+OCP_DOCS_ROOT_URL = "https://docs.openshift.com/serverless/"
 OCP_DOCS_VERSION = "4.15"
 UNREACHABLE_DOCS: int = 0
 RUNBOOKS_ROOT_URL = "https://github.com/openshift/runbooks/blob/master/alerts"
