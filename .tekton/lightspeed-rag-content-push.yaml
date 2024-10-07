@@ -27,6 +27,10 @@ spec:
     value: .
   - name: revision
     value: '{{revision}}'
+  - name: prefetch-input
+    value: '{"type": "pip", "path": ".", "allow_binary": "true"}'
+  - name: hermetic
+    value: "true"
   timeouts:
     pipeline: "9h0m0s"
     tasks: "9h0m0s"
@@ -215,6 +219,8 @@ spec:
         value: $(params.image-expires-after)
       - name: COMMIT_SHA
         value: $(tasks.clone-repository.results.commit)
+      - name: BUILD_ARGS
+        value: HERMETIC=$(params.hermetic)
       runAfter:
       - prefetch-dependencies
       timeout: "8h0m0s"
@@ -413,7 +419,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: 4Gi
+            storage: 24Gi
       status: {}
   - name: git-auth
     secret:
