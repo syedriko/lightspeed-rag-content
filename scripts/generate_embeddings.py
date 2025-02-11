@@ -3,11 +3,14 @@
 import argparse
 import json
 import os
+import psycopg2
 import time
 from typing import Callable, Dict
 
-import faiss
 import requests
+
+from sqlalchemy import make_url
+
 from llama_index.core import Settings, SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.llms.utils import resolve_llm
 from llama_index.readers.file.flat.base import FlatReader
@@ -16,7 +19,7 @@ from llama_index.readers.file.flat.base import FlatReader
 from llama_index.core.schema import TextNode
 from llama_index.core.storage.storage_context import StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.vector_stores.faiss import FaissVectorStore
+from llama_index.vector_stores.postgres import PGVectorStore
 
 OCP_DOCS_ROOT_URL = "https://docs.openshift.com/container-platform/"
 OCP_DOCS_VERSION = "4.15"
@@ -160,8 +163,23 @@ if __name__ == "__main__":
     Settings.llm = resolve_llm(None)
 
     embedding_dimension = len(Settings.embed_model.get_text_embedding("random text"))
-    faiss_index = faiss.IndexFlatIP(embedding_dimension)
-    vector_store = FaissVectorStore(faiss_index=faiss_index)
+
+    connection_string = "postgresql://127.0.0.1:5432?gssencmode=disable"
+    db_name = "vector_db"
+    conn = psycopg2.connect(connection_string)
+    conn.autocommit = True
+
+    url = make_url(connection_string)
+    vector_store = PGVectorStore.from_params(
+        database=db_name,
+        host=url.host,
+        password=url.password,
+        port=url.port,
+        user=url.username,
+        table_name="ols_rag",
+        embed_dim=embedding_dimension,
+    )
+
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
     # Load documents

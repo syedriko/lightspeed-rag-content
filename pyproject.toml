@@ -45,13 +45,18 @@ version = "0.1.0"
 description = "RAG content for OpenShift LightSpeed."
 authors = []
 dependencies = [
+    "psycopg2",
+    "psycopg2-binary",
+    "sqlalchemy",
+    "pgvector",
+    "asyncpg",
     "PyYAML==6.0.1",
     "huggingface_hub==0.23.4",
     "llama-index==0.10.62",
-    "llama-index-vector-stores-faiss==0.1.2",
+    "llama-index-storage-index-store-postgres",
+    "llama-index-vector-stores-postgres",
     "llama-index-embeddings-huggingface==0.2.2",
     "llama-index-readers-file==0.1.30",
-    "faiss-cpu==1.8.0.post1",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"

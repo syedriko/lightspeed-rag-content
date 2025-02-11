@@ -2,24 +2,21 @@
 
 import argparse
 import os
+import psycopg2
 
-from llama_index.core import Settings, load_index_from_storage
+from sqlalchemy import make_url
+
+from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.llms.utils import resolve_llm
 from llama_index.core.storage.storage_context import StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.vector_stores.faiss import FaissVectorStore
+from llama_index.vector_stores.postgres import PGVectorStore
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(
         description="Utility script for querying RAG database"
     )
-    parser.add_argument(
-        "-p",
-        "--db-path",
-        required=True,
-        help="path to the vector db",
-    )
-    parser.add_argument("-x", "--product-index", required=True, help="product index")
     parser.add_argument(
         "-m", "--model-path", required=True, help="path to the embedding model"
     )
@@ -34,14 +31,25 @@ if __name__ == "__main__":
     Settings.llm = resolve_llm(None)
     Settings.embed_model = HuggingFaceEmbedding(model_name=args.model_path)
 
-    storage_context = StorageContext.from_defaults(
-        vector_store=FaissVectorStore.from_persist_dir(args.db_path),
-        persist_dir=args.db_path,
+
+    connection_string = "postgresql://127.0.0.1:5432?gssencmode=disable"
+    db_name = "vector_db"
+    conn = psycopg2.connect(connection_string)
+    conn.autocommit = True
+
+    url = make_url(connection_string)
+    vector_store = PGVectorStore.from_params(
+        database=db_name,
+        host=url.host,
+        password=url.password,
+        port=url.port,
+        user=url.username,
+        table_name="ols_rag",
+        embed_dim=768,
     )
-    vector_index = load_index_from_storage(
-        storage_context=storage_context,
-        index_id=args.product_index,
-    )
+
+    vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+
     if args.node is not None:
         print(storage_context.docstore.get_node(args.node).__repr__())
     else:
