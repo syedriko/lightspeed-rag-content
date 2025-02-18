@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
     embedding_dimension = len(Settings.embed_model.get_text_embedding("random text"))
 
-    connection_string = "postgresql://127.0.0.1:5432?gssencmode=disable"
+    connection_string = "postgresql://<user>:<pwd>@127.0.0.1:5432?gssencmode=disable"
     db_name = "vector_db"
     conn = psycopg2.connect(connection_string)
     conn.autocommit = True
@@ -178,6 +178,8 @@ if __name__ == "__main__":
         user=url.username,
         table_name="ols_rag",
         embed_dim=embedding_dimension,
+        hybrid_search=True,
+        text_search_config="english",
     )
 
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
