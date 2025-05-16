@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+cd /workdir && pwd && ls -l
+python3.11 generate_embeddings_tool.py -i /tmp/src -emd embeddings_model \
+ -emn sentence-transformers/all-mpnet-base-v2 -o vector_db -id vector_db_index
+ls -l
+tar czf artifacts.tar.gz vector_db

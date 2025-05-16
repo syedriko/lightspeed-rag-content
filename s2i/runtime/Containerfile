@@ -1,0 +1,8 @@
+FROM registry.access.redhat.com/ubi9/ubi:latest
+
+LABEL io.openshift.s2i.scripts-url=image:///usr/libexec/s2i \
+      io.openshift.s2i.destination=/tmp
+
+# Add S2I scripts
+COPY s2i/runtime/bin /usr/libexec/s2i
+RUN chmod +x /usr/libexec/s2i/*

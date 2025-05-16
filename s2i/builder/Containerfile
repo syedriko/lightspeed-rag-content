@@ -1,0 +1,19 @@
+FROM registry.access.redhat.com/ubi9/ubi:latest
+
+LABEL io.openshift.s2i.scripts-url=image:///usr/libexec/s2i \
+      io.openshift.s2i.destination=/tmp
+
+RUN dnf install -y buildah python3.11 python3.11-pip
+
+USER 0
+WORKDIR /workdir
+
+COPY requirements.cpu.txt .
+RUN pip3.11 install --upgrade pip && pip3.11 install --no-cache-dir -r requirements.cpu.txt
+
+COPY embeddings_model ./embeddings_model
+COPY byok/generate_embeddings_tool.py .
+
+# Add S2I scripts
+COPY s2i/builder/bin /usr/libexec/s2i
+RUN chmod +x /usr/libexec/s2i/*

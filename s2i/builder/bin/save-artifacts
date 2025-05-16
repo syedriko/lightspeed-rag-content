@@ -1,0 +1,2 @@
+#!/bin/bash
+cp /tmp/artifacts.tar.gz $STI_SCRIPTS_PATH/
