@@ -1,0 +1,3 @@
+#!/bin/bash
+# no-op to satisfy s2i runtime expectations
+exit 0

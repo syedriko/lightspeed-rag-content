@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+mkdir -p /rag
+cd /rag
+tar xzf /tmp/artifacts.tar.gz
