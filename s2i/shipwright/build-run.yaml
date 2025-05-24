@@ -1,0 +1,8 @@
+---
+apiVersion: shipwright.io/v1alpha1
+kind: BuildRun
+metadata:
+  name: my-s2i-buildrun
+spec:
+  buildRef:
+    name: my-s2i-build
