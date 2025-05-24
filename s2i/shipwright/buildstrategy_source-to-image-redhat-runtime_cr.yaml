@@ -1,0 +1,56 @@
+---
+apiVersion: shipwright.io/v1beta1
+kind: ClusterBuildStrategy
+metadata:
+  name: source-to-image-redhat-runtime
+spec:
+  volumes:
+    - name: s2i
+      emptyDir: {}
+  steps:
+    - name: s2i-generate
+      image: registry.redhat.io/ocp-tools-43-tech-preview/source-to-image-rhel8:latest
+      workingDir: $(params.shp-source-root)
+      command:
+        - /usr/local/bin/s2i
+      args:
+        - build
+        - $(params.shp-source-context)
+        - $(params.builder-image)
+        - $(params.shp-output-image)
+        - --runtime-image
+        - $(params.runtime-image)
+        - --runtime-artifact
+        - /workdir/vector_db:rag
+      volumeMounts:
+        - name: s2i
+          mountPath: /s2i
+  parameters:
+    - name: registries-block
+      description: The registries that need to block pull access.
+      type: array
+      defaults: []
+    - name: registries-insecure
+      description: The fully-qualified name of insecure registries. An insecure registry is one that does not have a valid SSL certificate or only supports HTTP.
+      type: array
+      defaults: []
+    - name: registries-search
+      description: The registries for searching short name images such as `golang:latest`.
+      type: array
+      defaults:
+        - docker.io
+        - quay.io
+    - name: builder-image
+      description: The builder image.
+      type: string
+    - name: runtime-image
+      description: The runtime image.
+      type: string
+    - name: storage-driver
+      description: "The storage driver to use, such as 'overlay' or 'vfs'."
+      type: string
+      default: "vfs"
+      # For details see the "--storage-driver" section of https://github.com/containers/buildah/blob/main/docs/buildah.1.md#options
+  securityContext:
+    runAsUser: 0
+    runAsGroup: 0
