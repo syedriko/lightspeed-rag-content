@@ -10,7 +10,7 @@ spec:
       url: https://github.com/redhat-openshift-builds/samples
     contextDir: s2i-build/nodejs
   strategy:
-    name: source-to-image
+    name: my-source-to-image
     kind: ClusterBuildStrategy
   paramValues:
   - name: builder-image

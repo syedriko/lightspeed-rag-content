@@ -1,8 +1,8 @@
 ---
-apiVersion: shipwright.io/v1alpha1
+apiVersion: shipwright.io/v1beta1
 kind: BuildRun
 metadata:
-  name: my-s2i-buildrun
+  name: byok
 spec:
   buildRef:
-    name: my-s2i-build
+    name: byok
