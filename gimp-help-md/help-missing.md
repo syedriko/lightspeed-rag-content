@@ -13,3 +13,5 @@ project page](https://docs.gimp.org/).
 Found a **content error** or just something which doesn\'t look right?
 [Report a documentation
 error](https://gitlab.gnome.org/GNOME/gimp-help/issues) and let us know.
+
+Foobar

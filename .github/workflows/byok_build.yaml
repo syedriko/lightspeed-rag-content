@@ -1,0 +1,46 @@
+on:
+  push:
+    branches:
+      - syedriko-s2i
+
+jobs:
+  trigger-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decode and write OpenShift CA cert
+        run: |
+          echo "${{ secrets.OPENSHIFT_CA_B64 }}" | base64 -d > ca.crt
+
+      - name: Cancel existing running BuildRuns
+        run: |
+          RUNNING_BUILDRUNS=$(curl -s --cacert ca.crt \
+            -H "Authorization: Bearer ${{ secrets.OPENSHIFT_TOKEN }}" \
+            "${{ secrets.OPENSHIFT_API_URL }}/apis/shipwright.io/v1beta1/namespaces/builds/buildruns" | \
+            jq -r '.items[] | select(.metadata.labels["build.shipwright.io/name"]=="byok" and .status.conditions[]?.reason=="Running") | .metadata.name')
+
+          for br in $RUNNING_BUILDRUNS; do
+            echo "Cancelling $br"
+            curl -X DELETE --cacert ca.crt \
+              -H "Authorization: Bearer ${{ secrets.OPENSHIFT_TOKEN }}" \
+              "${{ secrets.OPENSHIFT_API_URL }}/apis/shipwright.io/v1beta1/namespaces/builds/buildruns/$br"
+          done
+
+      - name: Trigger new BuildRun
+        run: |
+          curl -X POST \
+            --cacert ca.crt \
+            -H "Authorization: Bearer ${{ secrets.OPENSHIFT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "apiVersion": "shipwright.io/v1beta1",
+              "kind": "BuildRun",
+              "metadata": {
+                "generateName": "byok-build-run"
+              },
+              "spec": {
+                "build": {
+                  "name": "byok"
+                }
+              }
+            }' \
+            ${{ secrets.OPENSHIFT_API_URL }}/apis/shipwright.io/v1beta1/namespaces/builds/buildruns
