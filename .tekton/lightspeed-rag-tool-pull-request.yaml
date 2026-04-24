@@ -39,7 +39,36 @@ spec:
   - name: build-source-image
     value: "true"
   - name: prefetch-input
-    value: '[{"type": "generic", "path": "."}, {"type": "rpm", "path": "."}, {"type": "pip", "path": ".", "allow_binary": "true", "requirements_files": ["requirements.cpu.txt"]}]'
+    value: |-
+      [
+        {
+          "type": "generic",
+          "path": "."
+        },
+        {
+          "type": "rpm",
+          "path": "."
+        },
+        {
+          "type": "pip",
+          "path": ".",
+          "requirements_files": [
+            "requirements.hashes.wheel.cpu.txt",
+            "requirements.hashes.source.cpu.txt",
+            "requirements.hermetic.txt"
+          ],
+          "requirements_build_files": [
+            "requirements-build.cpu.txt"
+          ],
+          "binary": {
+            "packages": "accelerate,aiohappyeyeballs,aiohttp,aiosignal,aiosqlite,annotated-types,anyio,attrs,beautifulsoup4,certifi,charset-normalizer,click,colorama,dataclasses-json,defusedxml,deprecated,faiss-cpu,filelock,filetype,frozenlist,fsspec,greenlet,h11,hf-xet,httpcore,httpx,huggingface-hub,idna,jinja2,joblib,marshmallow,mpmath,multidict,mypy-extensions,nest-asyncio,networkx,nltk,numpy,packaging,pandas,pillow,platformdirs,propcache,psutil,pydantic,pydantic-core,pypdf,python-dateutil,pytz,pyyaml,regex,requests,safetensors,scikit-learn,scipy,sentence-transformers,setuptools,six,soupsieve,sqlalchemy,sympy,tenacity,threadpoolctl,tiktoken,tokenizers,torch,tqdm,transformers,triton,typing-extensions,typing-inspect,typing-inspection,tzdata,urllib3,wrapt,yarl,uv,uv-build,pip,maturin,griffe,griffecli,griffelib",
+            "os": "linux",
+            "arch": "x86_64",
+            "py_version": 312
+          }
+        }
+      ]
+
   pipelineSpec:
     description: |
       This pipeline is ideal for building container images from a Containerfile while maintaining trust after pipeline customization.

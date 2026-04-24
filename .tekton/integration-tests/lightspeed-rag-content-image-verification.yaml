@@ -74,7 +74,7 @@ spec:
             script: |
               echo "---------------------------------------------"
               echo "${COMMIT_SHA}"
-              microdnf install -y python3.11 git
+              microdnf install -y python3.12 git
               git init lightspeed-rag-content
               cd lightspeed-rag-content
               git config --global user.email olsci@redhat.com
@@ -82,5 +82,5 @@ spec:
               git remote add origin https://github.com/openshift/lightspeed-rag-content.git
               git fetch --depth=1 origin ${COMMIT_SHA}
               git checkout FETCH_HEAD
-              python3.11 scripts/verify_rag_image_test.py
+              python3.12 scripts/verify_rag_image_test.py
 

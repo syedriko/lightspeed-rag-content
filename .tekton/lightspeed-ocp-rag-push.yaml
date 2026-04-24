@@ -30,7 +30,26 @@ spec:
   - name: build-source-image
     value: "true"
   - name: prefetch-input
-    value: '[{"type": "generic", "path": "."}, {"type": "rpm", "path": "lsc"}, {"type": "pip", "path": ".", "allow_binary": "true", "requirements_files": ["lsc/requirements.txt"]}]'
+    value: |-
+      [
+        {
+          "type": "generic",
+          "path": "."
+        },
+        {
+          "type": "rpm",
+          "path": "lsc"
+        },
+        {
+          "type": "pip",
+          "path": ".",
+          "allow_binary": "true",
+          "requirements_files": [
+            "lsc/requirements.txt"
+          ]
+        }
+      ]
+
   - name: hermetic
     value: "true"
   - name: build-args

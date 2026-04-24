@@ -8,18 +8,36 @@ ARG VECTOR_DB_INDEX=vector_db_index
 ARG BYOK_TOOL_IMAGE
 ARG UBI_BASE_IMAGE
 ARG HERMETIC
-RUN dnf install -y buildah python3.11 python3.11-pip && dnf clean all
+RUN dnf install -y buildah python3.12 python3.12-pip && dnf clean all
 
 USER 0
 WORKDIR /workdir
 
-COPY requirements.cpu.txt .
-RUN pip3.11 install --no-cache-dir --no-deps -r requirements.cpu.txt
+# Same CPU lockfiles as the lightspeed-rag-tool image (repo root; see scripts/konflux_requirements.sh)
+COPY \
+    requirements.hashes.wheel.cpu.txt \
+    requirements.hashes.source.cpu.txt \
+    requirements-build.cpu.txt \
+    requirements.hermetic.txt \
+    pyproject.toml \
+    LICENSE \
+    /workdir/
+
+RUN if [ -f /cachi2/cachi2.env ]; then \
+        . /cachi2/cachi2.env && \
+        pip3.12 install --no-cache-dir --no-index --find-links "${PIP_FIND_LINKS}" --no-deps \
+            -r requirements.hashes.wheel.cpu.txt \
+            -r requirements.hashes.source.cpu.txt \
+    ; else \
+        pip3.12 install --no-cache-dir "pip>=25" && \
+        pip3.12 install --no-cache-dir -e ".[cpu]" \
+    ; fi
+RUN ln -sf "/usr/local/lib/python3.12/site-packages/llama_index/core/_static/nltk_cache" /root/nltk_data
 
 COPY embeddings_model ./embeddings_model
 ENV HERMETIC=$HERMETIC
-RUN cd embeddings_model; \
-    if [ ! -f embeddings_model/model.safetensors ]; then \
+RUN cd embeddings_model && \
+    if [ ! -f model.safetensors ]; then \
         if [ "$HERMETIC" == "true" ]; then \
             cp /cachi2/output/deps/generic/model.safetensors model.safetensors; \
         else \

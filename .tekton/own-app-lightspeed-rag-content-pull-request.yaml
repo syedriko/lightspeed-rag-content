@@ -33,7 +33,36 @@ spec:
   - name: build-source-image
     value: "true"
   - name: prefetch-input
-    value: '[{"type": "generic", "path": "."}, {"type": "rpm", "path": "."}, {"type": "pip", "path": ".", "allow_binary": "true", "requirements_files": ["requirements.gpu.txt"]}]'
+    value: |-
+      [
+        {
+          "type": "generic",
+          "path": "."
+        },
+        {
+          "type": "rpm",
+          "path": "."
+        },
+        {
+          "type": "pip",
+          "path": ".",
+          "requirements_files": [
+            "requirements.hashes.wheel.gpu.txt",
+            "requirements.hashes.source.gpu.txt",
+            "requirements.hermetic.txt"
+          ],
+          "requirements_build_files": [
+            "requirements-build.gpu.txt"
+          ],
+          "binary": {
+            "packages": "accelerate,aiohappyeyeballs,aiohttp,aiosignal,annotated-types,anyio,attrs,beautifulsoup4,certifi,charset-normalizer,click,colorama,dataclasses-json,defusedxml,deprecated,filelock,filetype,frozenlist,fsspec,greenlet,h11,hf-xet,httpcore,httpx,huggingface-hub,idna,jinja2,joblib,marshmallow,mpmath,multidict,mypy-extensions,nest-asyncio,networkx,nltk,numpy,packaging,pandas,pillow,platformdirs,propcache,psutil,pydantic,pydantic-core,python-dateutil,pytz,pyyaml,regex,requests,safetensors,scikit-learn,scipy,sentence-transformers,setuptools,six,soupsieve,sqlalchemy,sympy,tenacity,threadpoolctl,tiktoken,tokenizers,torch,tqdm,transformers,triton,typing-extensions,typing-inspect,typing-inspection,tzdata,urllib3,wrapt,yarl,uv,uv-build,pip,maturin,griffe,griffecli,griffelib",
+            "os": "linux",
+            "arch": "x86_64",
+            "py_version": 312
+          }
+        }
+      ]
+
   - name: hermetic
     value: "true"
   - name: build-args
